@@ -5,6 +5,11 @@ using UnityEngine;
 
 public class NestingController : MonoBehaviour
 {
+    #region events
+    public delegate void Resize(Vector3 pos);
+    public static event Resize OnResizeEvent;
+    #endregion
+
     public int boardWidth = 297;
     public int boardHeight = 210;
     public GameObject box;
@@ -20,7 +25,7 @@ public class NestingController : MonoBehaviour
         CreateBoxes(boxCount);
         //Debug.Log(boxList[0].width + " x " + boxList[0].height);
 
-        // Å×½ºÆ® Á¤·Ä
+        // ï¿½×½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
         float sum = 0;
         foreach (GameObject obj in boxList)
         {
@@ -32,7 +37,7 @@ public class NestingController : MonoBehaviour
         DoNesting();
     }
 
-    // ¹Ú½º »ý¼º ¹× ÀÚµ¿ ¸éÀû ³»¸²Â÷¼ø Á¤·Ä
+    // ï¿½Ú½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     void CreateBoxes(int count)
     {
         int index = 0;
@@ -70,7 +75,7 @@ public class NestingController : MonoBehaviour
 
     void DoNesting()
     {
-        // Board »ý¼º
+        // Board ï¿½ï¿½ï¿½ï¿½
         if (boardList.Count <= 0)
         {
             CreateBoard(0);
@@ -81,42 +86,42 @@ public class NestingController : MonoBehaviour
             int currentBoardIndex = 0;
             bool isRotated = false;
 
-            for(int x=0; x<boardWidth; x++)
+            for (int x = 0; x < boardWidth; x++)
             {
-                for(int y=0; y<boardHeight; y++)
+                for (int y = 0; y < boardHeight; y++)
                 {
                     int[] startP = { x, y };
 
-                    // board ÇÊ¿ä ½Ã Ãß°¡
+                    // board ï¿½Ê¿ï¿½ ï¿½ï¿½ ï¿½ß°ï¿½
                     if (boardList.Count <= currentBoardIndex) CreateBoard(currentBoardIndex);
 
                     bool isPossibleBoard = boardList.Count > 0 && boardList[currentBoardIndex].state != BoardState.Impossible;
                     if (isPossibleBoard)
                     {
-                        // startP¿¡¼­ ¹Ú½º°¡ ¼± ³ÑÀ¸¸é ÁßÁö
-                        // board.matrix, true ÇÏ³ª¶óµµ ÀÖ¾îµµ ÁßÁö
-                        // ÁßÁö ½Ã È¸Àü ½Ãµµ 1È¸
-                        FindMatrix:
+                    // startPï¿½ï¿½ï¿½ï¿½ ï¿½Ú½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+                    // board.matrix, true ï¿½Ï³ï¿½ï¿½ï¿½ ï¿½Ö¾îµµ ï¿½ï¿½ï¿½ï¿½
+                    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ È¸ï¿½ï¿½ ï¿½Ãµï¿½ 1È¸
+                    FindMatrix:
                         int w = (int)box.transform.localScale.x;
                         int h = (int)box.transform.localScale.z;
-                        int falseCount = 0;                        
+                        int falseCount = 0;
                         for (int i = 0; i < w; i++)
                         {
                             for (int j = 0; j < h; j++)
                             {
-                                bool isStop = 
+                                bool isStop =
                                     startP[0] + w > boardWidth ||
-                                    startP[1] + h > boardHeight || 
+                                    startP[1] + h > boardHeight ||
                                     boardList[currentBoardIndex].matrix[i + startP[0], j + startP[1]] == true;
-                                
+
                                 if (isStop)
                                 {
-                                    if (isRotated == false) 
+                                    if (isRotated == false)
                                     {
                                         box.transform.localScale.Set(box.transform.localScale.z, 1, box.transform.localScale.x);
                                         isRotated = true;
                                         goto FindMatrix;
-                                    } 
+                                    }
                                     else
                                     {
                                         goto DrawBox;
@@ -129,12 +134,12 @@ public class NestingController : MonoBehaviour
                             }
                         }
 
-                        // box È­¸é¿¡ ¹èÄ¡.  board.matrix, box¿µ¿ª true·Î º¯È¯
-                        DrawBox:
+                    // box È­ï¿½é¿¡ ï¿½ï¿½Ä¡.  board.matrix, boxï¿½ï¿½ï¿½ï¿½ trueï¿½ï¿½ ï¿½ï¿½È¯
+                    DrawBox:
                         if (falseCount == w * h)
                         {
                             box.transform.position = new Vector3(
-                                startP[0] + w * 0.5f + (currentBoardIndex * boardWidth), 
+                                startP[0] + w * 0.5f + (currentBoardIndex * boardWidth),
                                 0,
                                 startP[1] + h * 0.5f
                                 );
@@ -150,10 +155,10 @@ public class NestingController : MonoBehaviour
                         }
                         else
                         {
-                            // º¸µå ¸¶Áö¸·±îÁö Ã£¾Æµµ ÀÚ¸® ¾øÀ¸¸é º¸µå Ãß°¡
-                            bool isOver = 
+                            // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã£ï¿½Æµï¿½ ï¿½Ú¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
+                            bool isOver =
                                 box.transform.localScale.x * box.transform.localScale.z > 1 &&
-                                startP[0] >= boardWidth - 1 && 
+                                startP[0] >= boardWidth - 1 &&
                                 startP[1] >= boardHeight - 1;
                             if (isOver)
                             {
@@ -169,9 +174,14 @@ public class NestingController : MonoBehaviour
                     }
                 }
             }
-            EndDrawing:
+        EndDrawing:
             { }
         }
+        OnResizeEvent(new Vector3(
+            boardList.Count * 0.5f * boardWidth,
+            1,
+            0
+        ));
     }
 
     void CreateBoard(int index)
@@ -190,4 +200,4 @@ public class NestingController : MonoBehaviour
         boardPlane.SetActive(true);
     }
 }
-// º¸µå Ãß°¡, È¸Àü
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½, È¸ï¿½ï¿½
