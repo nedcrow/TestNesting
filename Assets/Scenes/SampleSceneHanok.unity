@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &34726463
+--- !u!1 &250754020
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,210 +127,56 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 34726465}
-  - component: {fileID: 34726464}
+  - component: {fileID: 250754021}
+  - component: {fileID: 250754022}
   m_Layer: 0
-  m_Name: RegionSketchView
+  m_Name: ConstructionSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &34726464
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 34726463}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2e3e6e589c153a04ba4c0fbab7d3747f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RegionSketchController
-  maxVertices: 4
-  lineWidth: 4
-  lineHeightOffset: 0.02
-  meshHeightOffset: 0.01
-  lineColor: {r: 0.15, g: 0.75, b: 1, a: 1}
-  defaultMeshColor: {r: 0.6, g: 0.6, b: 0.6, a: 0.25}
-  prewarmLineCount: 5
-  dashTexture: {fileID: 2800000, guid: 8081fe122ecf29b42a86e43fd64a30b2, type: 3}
-  dashWorldLength: 0.5
-  dashScrollSpeed: 0
-  customMeshMaterial: {fileID: 2100000, guid: 92e8f2a3c5a4e2547b7c5ddddc300bc5, type: 2}
-  cloneMaterial: 1
---- !u!4 &34726465
+--- !u!4 &250754021
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 34726463}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 196254791}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &196254789
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 196254791}
-  - component: {fileID: 196254790}
-  m_Layer: 0
-  m_Name: HanokSiteController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &196254790
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 196254789}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aeeb8cd1a8d416a48a3ce2d932ae5e5c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HanokNestingController
-  cam: {fileID: 963194227}
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  region: {fileID: 34726464}
-  catalog: {fileID: 699147587}
-  solver: {fileID: 1400717602}
-  structurePool: {fileID: 699147585}
-  activeCategory: 
-  clickPixelThreshold: 4
-  respectCameraGestures: 1
-  minVertexSpacing: 0.05
-  cursorWorldEpsilon: 0.01
-  color_OK: {r: 0, g: 0.7924528, b: 0.3169812, a: 0.2509804}
-  color_Fail: {r: 1, g: 0.3160377, b: 0.3160377, a: 0.25}
-  usePoolPreview: 1
-  previewEveryDeg: 45
-  maxPreviewGhosts: 6
-  ghostOK: {r: 0, g: 1, b: 0, a: 0.25}
-  ghostNG: {r: 1, g: 0, b: 0, a: 0.2}
---- !u!4 &196254791
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 196254789}
+  m_GameObject: {fileID: 250754020}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 34726465}
-  - {fileID: 699147586}
-  - {fileID: 1400717601}
+  - {fileID: 2067919896}
+  - {fileID: 1689491063}
+  - {fileID: 1558093747}
+  - {fileID: 860790367}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &699147584
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 699147586}
-  - component: {fileID: 699147585}
-  - component: {fileID: 699147587}
-  m_Layer: 0
-  m_Name: StructurePool
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &699147585
+--- !u!114 &250754022
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 699147584}
+  m_GameObject: {fileID: 250754020}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 660a15c3be4e7574c843a0e453fa2f63, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c872c3bd147adc428acbcc63168236f, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StructurePool
-  catalog: {fileID: 699147587}
---- !u!4 &699147586
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 699147584}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 196254791}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &699147587
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 699147584}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e03cedc16727df645ada314ccf55b553, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::StructureCatalog
-  entries:
-  - prefab: {fileID: -4276895988213308204, guid: b7995d4f3e5cf424e8d2874965440a8e, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -8366454981637436547, guid: 5196ec21430cf774a97a588f22db740d, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -7664090022498930267, guid: 628c9866449ded64cbaa7a513eb498f0, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: 6942045325648057119, guid: 00c3e9e4e10dfed428e34d979d141261, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -847565671570548001, guid: 392126b4c00480c479d7e462e1ea9339, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -9045583825975465115, guid: a1d3b06dc2fbad24f8a7b284db7c2a25, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -3780568145062810700, guid: 88b61c6dbc47ffb4bb59c3dd46ec1874, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -3780568145062810700, guid: 88b61c6dbc47ffb4bb59c3dd46ec1874, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -3175695278548857280, guid: 818edddda23f0fd4285124ff6a52e35a, type: 3}
-    priority: 0
-    prewarm: 5
-  - prefab: {fileID: -3175695278548857280, guid: 818edddda23f0fd4285124ff6a52e35a, type: 3}
-    priority: 0
-    prewarm: 5
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.HanokConstructionSystem
+  plotCreator: {fileID: 2067919897}
+  plotDivider: {fileID: 2067919898}
+  houseCreator: {fileID: 1689491064}
+  validLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  <IsConstructionMode>k__BackingField: 1
+  <IsPlotActive>k__BackingField: 0
+  <IsCursorOnValidLayer>k__BackingField: 0
+  <CurrentHouse>k__BackingField: {fileID: 3009073232824029118, guid: a5bf3626a8673ec499d2023eaa17c906, type: 3}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
@@ -428,6 +274,61 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &860790366
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 860790367}
+  - component: {fileID: 860790368}
+  m_Layer: 0
+  m_Name: HouseCatalog
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &860790367
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 860790366}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 41.95992, y: 0.04999, z: -186.90845}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 250754021}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &860790368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 860790366}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4034df89042360479d006d019de604c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.HouseCatalog
+  registeredPrefabs:
+  - {fileID: 6062636142699547771, guid: a5bf3626a8673ec499d2023eaa17c906, type: 3}
+  - {fileID: 6062636142699547771, guid: c621166a48783ed47a3d89a6493027d9, type: 3}
+  - {fileID: 6062636142699547771, guid: 24806038a141d694e990190539229beb, type: 3}
+  - {fileID: 6062636142699547771, guid: 45100e509425ac6439f50a7766b0afdb, type: 3}
+  - {fileID: 6062636142699547771, guid: 59faf9d0044152b4686618f9f900378f, type: 3}
+  - {fileID: 6062636142699547771, guid: f5a4949817c2fe940a26fff82cff4e90, type: 3}
+  - {fileID: 6062636142699547771, guid: ae5e175bb3a1da84082344a798ade865, type: 3}
+  - {fileID: 6062636142699547771, guid: a9675c51b8e7fd44a8ea747535c96979, type: 3}
+  housePrefabs:
+  - {fileID: 3009073232824029118, guid: a5bf3626a8673ec499d2023eaa17c906, type: 3}
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0
@@ -514,13 +415,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.4848096, y: 0, z: 0, w: 0.8746197}
-  m_LocalPosition: {x: 0, y: 674, z: -581}
+  m_LocalRotation: {x: 0.45117077, y: -0, z: -0, w: 0.89243764}
+  m_LocalPosition: {x: 0, y: 32, z: -32}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 58, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 53.638, y: 0, z: 0}
 --- !u!114 &963194229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -533,7 +434,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8929213ab1f48eb45873c8deb11629c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
-  home: {x: 0, y: 674, z: -581}
+  home: {x: 0, y: 32, z: -32}
   orbitDegreesPerPixel: 1
   panUnitsPerPixel: 0.1
   allowPassThroughPivot: 1
@@ -567,8 +468,8 @@ GameObject:
   - component: {fileID: 1361351590}
   - component: {fileID: 1361351595}
   - component: {fileID: 1361351594}
-  m_Layer: 0
-  m_Name: Plane
+  m_Layer: 3
+  m_Name: Ground
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -621,7 +522,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: a1caf9045e36d1743aad6f205ad50cc8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -662,7 +563,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 1, z: 100}
+  m_LocalScale: {x: 10, y: 1, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -715,7 +616,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 10, y: 0.1, z: 10}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!1 &1400355765
+--- !u!1 &1558093745
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -723,37 +624,156 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1400355767}
-  - component: {fileID: 1400355766}
+  - component: {fileID: 1558093747}
+  - component: {fileID: 1558093746}
   m_Layer: 0
-  m_Name: HouseManager
+  m_Name: BuildingCatalog
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1400355766
+--- !u!114 &1558093746
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1400355765}
+  m_GameObject: {fileID: 1558093745}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 365c8b0017b5b3c408e1fc6ebde2d406, type: 3}
+  m_Script: {fileID: 11500000, guid: 7df330f0f8e2d14468f19531ab981913, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HanokHouseManager
-  catalog: {fileID: 0}
-  pool: {fileID: 0}
-  houses: []
---- !u!4 &1400355767
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.BuildingCatalog
+  registeredPrefabs:
+  - {fileID: 4052125600440826852, guid: 818edddda23f0fd4285124ff6a52e35a, type: 3}
+  - {fileID: 4052125600440826852, guid: ca9721adc86cd5a49b9c2ff743173eb2, type: 3}
+  - {fileID: 4052125600440826852, guid: a1d3b06dc2fbad24f8a7b284db7c2a25, type: 3}
+  - {fileID: 4052125600440826852, guid: 88b61c6dbc47ffb4bb59c3dd46ec1874, type: 3}
+  - {fileID: 4052125600440826852, guid: dad914df97cbceb43a0b014f8300e364, type: 3}
+  - {fileID: 4052125600440826852, guid: b7995d4f3e5cf424e8d2874965440a8e, type: 3}
+  - {fileID: 4052125600440826852, guid: 5196ec21430cf774a97a588f22db740d, type: 3}
+  - {fileID: 4052125600440826852, guid: 9ab5de906d28f3541b16072ce607bd02, type: 3}
+  - {fileID: 4052125600440826852, guid: 628c9866449ded64cbaa7a513eb498f0, type: 3}
+  - {fileID: 4052125600440826852, guid: 00c3e9e4e10dfed428e34d979d141261, type: 3}
+  - {fileID: 4052125600440826852, guid: 815a2b72b2caa1344b8ed583596474de, type: 3}
+  - {fileID: 4052125600440826852, guid: 392126b4c00480c479d7e462e1ea9339, type: 3}
+  buildingGroups: []
+--- !u!4 &1558093747
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1400355765}
+  m_GameObject: {fileID: 1558093745}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 41.95992, y: 0.04999, z: -186.90845}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 250754021}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1689491062
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1689491063}
+  - component: {fileID: 1689491064}
+  m_Layer: 0
+  m_Name: HouseCreator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1689491063
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1689491062}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 250754021}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1689491064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1689491062}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2319c8375b1da994190edbb648a8940b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.HouseMaker
+  houseCatalog: {fileID: 0}
+  buildingCatalog: {fileID: 0}
+  housePoolingComponent: {fileID: 0}
+  buildingPoolingComponent: {fileID: 0}
+  housePadding: 2
+--- !u!1 &1871433683
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1871433685}
+  - component: {fileID: 1871433684}
+  m_Layer: 6
+  m_Name: RoadBuilder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1871433684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1871433683}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53a1cf23f0c5b3841a49c0e683665bc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.RoadBuilder
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 8
+  rayMaxDistance: 1000
+  roadWidth: 2
+  roadMaterial: {fileID: 0}
+  uvTilingPerMeter: 1
+  samplesPerMeter: 1.5
+  handleLenRatio: 0.25
+  maxHandleLen: 8
+  segmentLength: 6
+  snapDistance: 2
+  up: {x: 0, y: 0, z: 0}
+  previewColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
+  _buildModeEnabled: 1
+--- !u!4 &1871433685
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1871433683}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -762,7 +782,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1400717600
+--- !u!1 &2067919895
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -770,50 +790,64 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1400717601}
-  - component: {fileID: 1400717602}
+  - component: {fileID: 2067919896}
+  - component: {fileID: 2067919897}
+  - component: {fileID: 2067919898}
   m_Layer: 0
-  m_Name: PlacementSolver
+  m_Name: PlotCreator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1400717601
+--- !u!4 &2067919896
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1400717600}
+  m_GameObject: {fileID: 2067919895}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 196254791}
+  m_Father: {fileID: 250754021}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1400717602
+--- !u!114 &2067919897
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1400717600}
+  m_GameObject: {fileID: 2067919895}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5d961ffab2f31cc4c936fd3ebd0d3bba, type: 3}
+  m_Script: {fileID: 11500000, guid: bddf01bcca817e84984e39b853070a1a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HanokPlacementSolver
-  minAngle: 30
-  maxAngle: 150
-  checkSelfIntersection: 1
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  rotationStepDeg: 15
-  footprintMargin: 0.25
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.PlotDefinitionController
+  lineMaterial: {fileID: 0}
+  fillMaterial: {fileID: 0}
+  snapToRoadDistance: 2
+  enableRoadSnapping: 0
+  enableRoadCurving: 1
+--- !u!114 &2067919898
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2067919895}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bdd4846deb14e940911d52243e6325f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.PlotDivider
+  lineMaterial: {fileID: 0}
+  semiPlotColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  markerColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  markerLength: 0.4
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -821,5 +855,5 @@ SceneRoots:
   - {fileID: 963194228}
   - {fileID: 705507995}
   - {fileID: 1361351593}
-  - {fileID: 196254791}
-  - {fileID: 1400355767}
+  - {fileID: 250754021}
+  - {fileID: 1871433685}
