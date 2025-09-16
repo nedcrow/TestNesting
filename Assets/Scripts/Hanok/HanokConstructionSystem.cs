@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace Hanok
 {
@@ -87,7 +88,7 @@ namespace Hanok
         #region Input Handling
         private void HandleInput()
         {
-            // Ignore input when modifier keys are pressed
+            // Ignore input
             if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) ||
                 Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) ||
                 Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
@@ -95,6 +96,12 @@ namespace Hanok
                 return;
             }
 
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                return;
+            }
+
+            // Click
             if (IsCursorOnValidLayer)
             {
                 if (Input.GetMouseButtonDown(0))
@@ -109,13 +116,13 @@ namespace Hanok
 
             }
 
-            // Enter: Finalize plot
+            // Enter
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
                 OnEnterPressed();
             }
 
-            // Escape: Cancel plot
+            // Escape
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 OnEscapePressed();
