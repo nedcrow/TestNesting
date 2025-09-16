@@ -37,7 +37,7 @@ public class RoadBuilder : MonoBehaviour
     [Header("Preview")]
     [SerializeField] private Color previewColor = new Color(1f, 0.85f, 0.2f, 0.9f);
 
-    private bool _buildModeEnabled = true;
+    [SerializeField] private bool _buildModeEnabled = true;
     public bool BuildModeEnabled
     {
         get => _buildModeEnabled;
@@ -141,6 +141,7 @@ public class RoadBuilder : MonoBehaviour
 
                             var roadGO = new GameObject($"Road_{_roads.Count}");
                             roadGO.transform.SetParent(_roadsParent, false);
+                            roadGO.layer = gameObject.layer;
                             var road = roadGO.AddComponent<RoadComponent>();
                             road.Initialize(centerline, dirStart, dirEnd, roadWidth);
 
