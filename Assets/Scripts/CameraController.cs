@@ -158,8 +158,9 @@ public class EditorLikeCameraController : MonoBehaviour
         }
 
         // SCROLL ZOOM (하이브리드 스텝: 비례 + 최소 보장)
+        // Alt 키가 눌린 상태에서는 스크롤 줌 비활성화 (RoadBuilder의 Alt 곡선 조정과 충돌 방지)
         float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (Mathf.Abs(scroll) > Mathf.Epsilon)
+        if (!alt && Mathf.Abs(scroll) > Mathf.Epsilon)
         {
             float dist = Mathf.Max(targetDistance, 0.01f);
             float step = Mathf.Max(dist * zoomMul * speedMul, zoomMinStep * speedMul);
