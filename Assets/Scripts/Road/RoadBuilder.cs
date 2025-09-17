@@ -15,6 +15,7 @@ using UnityEngine;
 [DefaultExecutionOrder(-10)]
 public class RoadBuilder : MonoBehaviour
 {
+    #region Inspector Settings
     [Header("Raycast / Input")]
     [SerializeField] private LayerMask groundMask;
     [SerializeField] private float rayMaxDistance = 2000f;
@@ -28,15 +29,25 @@ public class RoadBuilder : MonoBehaviour
     [SerializeField] private float samplesPerMeter = 1.5f;
     [SerializeField] private float handleLenRatio = 0.25f;
     [SerializeField] private float maxHandleLen = 8f;
+    
+    [Header("Alt Curve (Sin Wave)")]
+    [SerializeField] private float altCurveStrength = 0.3f;
 
     [Header("Segmentation / Snapping")]
     [SerializeField] private float segmentLength = 6f;
     [SerializeField] private float snapDistance = 2.0f;
-    [SerializeField] private Vector3 up = default; // (0,0,0) → Vector3.up
+    [SerializeField] private Vector3 up = default;
 
     [Header("Preview")]
     [SerializeField] private Color previewColor = new Color(1f, 0.85f, 0.2f, 0.9f);
+    #endregion
 
+    #region Constants
+    private const float WHEEL_SENSITIVITY = 0.1f;
+    private const float SCROLL_THRESHOLD = 0.01f;
+    #endregion
+
+    #region Runtime State
     [SerializeField] private bool _buildModeEnabled = true;
     public bool BuildModeEnabled
     {
@@ -61,17 +72,17 @@ public class RoadBuilder : MonoBehaviour
     private MeshFilter _previewMF;
     private MeshRenderer _previewMR;
 
-    // click-then-click
     private bool _isPreviewing;
     private Vector3 _startAnchor;
     private bool _startSnapped;
     private Vector3 _startSnapTangent;
     private bool _startSnapIsEndpoint;
 
-    // registries
-    private readonly List<RoadComponent> _roads = new();            // for snapping
-    private readonly List<RoadChunkRef> _chunks = new();    // for deletion
+    private readonly List<RoadComponent> _roads = new();
+    private readonly List<RoadChunkRef> _chunks = new();
+    #endregion
 
+    #region Initialization
     private void Awake() => InitOnce();
 
     private void InitOnce()
@@ -104,90 +115,149 @@ public class RoadBuilder : MonoBehaviour
         SetMaterialColor(_previewMR, previewColor);
         _previewGO.SetActive(false);
     }
+    #endregion
 
+    #region Input & Update
     private void Update()
     {
         if (!_cam) _cam = Camera.main;
 
-        // 건설 모드 ON일 때만 좌클릭(시작/완료)과 프리뷰 갱신 동작
-        if (BuildModeEnabled)
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                if (!_isPreviewing)
-                {
-                    if (RayToGround(out var hitPos))
-                    {
-                        _startSnapped = TryFindSnap(hitPos, out var sPoint, out var sTan, out var sIsEnd);
-                        if (_startSnapped)
-                        { _startAnchor = sPoint; _startSnapTangent = sTan; _startSnapIsEndpoint = sIsEnd; }
-                        else
-                        { _startAnchor = hitPos; _startSnapTangent = Vector3.zero; _startSnapIsEndpoint = false; }
+        HandleAltCurveAdjustment();
+        HandleInput();
+    }
 
-                        _isPreviewing = true;
-                        _previewGO.SetActive(true);
-                    }
-                }
-                else
-                {
-                    if (RayToGround(out var endPos))
-                    {
-                        bool straight = IsStraightMode();
-                        var centerline = BuildCenterlineWithSnap(_startAnchor, endPos, straight, out _);
-                        if (centerline != null && centerline.Count >= 2)
-                        {
-                            var dirStart = DirectionAtStart(centerline);
-                            var dirEnd = DirectionAtEnd(centerline);
+    private void HandleInput()
+    {
+        if (!BuildModeEnabled) return;
 
-                            var roadGO = new GameObject($"Road_{_roads.Count}");
-                            roadGO.transform.SetParent(_roadsParent, false);
-                            roadGO.layer = gameObject.layer;
-                            var road = roadGO.AddComponent<RoadComponent>();
-                            road.Initialize(centerline, dirStart, dirEnd, roadWidth);
+        HandleLeftClick();
+        HandlePreview();
+        HandleRightClick();
+        HandleEscape();
+    }
 
-                            CreateChunksUnderRoad(road, centerline, roadGO.transform);
-                            _roads.Add(road);
-                        }
-                    }
-                    _isPreviewing = false;
-                    _previewGO.SetActive(false);
-                }
-            }
+    private void HandleLeftClick()
+    {
+        if (!Input.GetMouseButtonDown(0)) return;
 
-            if (_isPreviewing && RayToGround(out var mousePos))
-            {
-                bool straight = IsStraightMode();
-                var centerline = BuildCenterlineWithSnap(_startAnchor, mousePos, straight, out _);
-                UpdatePreview(centerline);
-            }
-        }
+        if (!_isPreviewing)
+            StartPreview();
+        else
+            BuildRoad();
+    }
 
-        // 우클릭: 프리뷰 중이면 취소, 아니면 청크 삭제 (건설 모드와 무관)
-        if (Input.GetMouseButtonDown(1))
-        {
-            if (_isPreviewing)
-            {
-                _isPreviewing = false;
-                _previewGO.SetActive(false);
-            }
-            else
-            {
-                TryDeleteChunkUnderMouse();
-            }
-        }
+    private void StartPreview()
+    {
+        if (!RayToGround(out var hitPos)) return;
 
+        SetStartAnchor(hitPos);
+        _isPreviewing = true;
+        _previewGO.SetActive(true);
+    }
+
+    private void BuildRoad()
+    {
+        if (!RayToGround(out var endPos)) return;
+
+        var centerline = CreateCenterline(_startAnchor, endPos);
+        if (centerline == null || centerline.Count < 2) return;
+
+        CreateRoadFromCenterline(centerline);
+        SetStartAnchor(endPos);
+    }
+
+    private void HandlePreview()
+    {
+        if (!_isPreviewing || !RayToGround(out var mousePos)) return;
+
+        var centerline = CreateCenterline(_startAnchor, mousePos);
+        UpdatePreview(centerline);
+    }
+
+    private void HandleRightClick()
+    {
+        if (!Input.GetMouseButtonDown(1)) return;
+
+        if (_isPreviewing)
+            StopPreview();
+        else
+            TryDeleteChunkUnderMouse();
+    }
+
+    private void HandleEscape()
+    {
         if (Input.GetKeyDown(KeyCode.Escape) && _isPreviewing)
+            StopPreview();
+    }
+
+    private void SetStartAnchor(Vector3 position)
+    {
+        _startSnapped = TryFindSnap(position, out var sPoint, out var sTan, out var sIsEnd);
+        if (_startSnapped)
         {
-            _isPreviewing = false;
-            _previewGO.SetActive(false);
+            _startAnchor = sPoint;
+            _startSnapTangent = sTan;
+            _startSnapIsEndpoint = sIsEnd;
+        }
+        else
+        {
+            _startAnchor = position;
+            _startSnapTangent = Vector3.zero;
+            _startSnapIsEndpoint = false;
         }
     }
 
+    private List<Vector3> CreateCenterline(Vector3 start, Vector3 end)
+    {
+        bool straight = IsStraightMode();
+        bool wideArc = IsWideArcMode();
+        return BuildCenterlineWithSnap(start, end, straight, wideArc, out _);
+    }
+
+    private void CreateRoadFromCenterline(List<Vector3> centerline)
+    {
+        var dirStart = DirectionAtStart(centerline);
+        var dirEnd = DirectionAtEnd(centerline);
+
+        var roadGO = new GameObject($"Road_{_roads.Count}");
+        roadGO.transform.SetParent(_roadsParent, false);
+        roadGO.layer = gameObject.layer;
+
+        var road = roadGO.AddComponent<RoadComponent>();
+        road.Initialize(centerline, dirStart, dirEnd, roadWidth);
+
+        CreateChunksUnderRoad(road, centerline, roadGO.transform);
+        _roads.Add(road);
+    }
+
+    private void StopPreview()
+    {
+        _isPreviewing = false;
+        _previewGO.SetActive(false);
+    }
+
+    private void HandleAltCurveAdjustment()
+    {
+        if (!IsAltPressed()) return;
+
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        if (Mathf.Abs(scroll) > SCROLL_THRESHOLD)
+        {
+            float change = scroll * WHEEL_SENSITIVITY;
+            altCurveStrength = Mathf.Max(0f, altCurveStrength + change);
+        }
+    }
+
+    private bool IsAltPressed() => Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
 
     private bool IsStraightMode()
     {
-        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)
-            || Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+    }
+
+    private bool IsWideArcMode()
+    {
+        return Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
     }
 
     private bool RayToGround(out Vector3 pos)
@@ -201,64 +271,55 @@ public class RoadBuilder : MonoBehaviour
         pos = default;
         return false;
     }
+    #endregion
 
-    // Build path, considering start snap (saved in state) and end snap
-    private List<Vector3> BuildCenterlineWithSnap(Vector3 start, Vector3 mouseEnd, bool straightMode, out Vector3 endTangentUsed)
+    #region Bezier Curve Generation
+    private List<Vector3> BuildCenterlineWithSnap(Vector3 start, Vector3 mouseEnd, bool straightMode, bool wideArcMode, out Vector3 endTangentUsed)
     {
         endTangentUsed = Vector3.zero;
 
-        // 종료 스냅
         bool endSnapped = TryFindSnap(mouseEnd, out var ePoint, out var eTan, out var eIsEnd);
         var end = endSnapped ? ePoint : mouseEnd;
 
-        // 시작/종료 힌트
         Vector3 startHint = Vector3.zero;
         Vector3 endHint = Vector3.zero;
-
         Vector3 abDir = (end - start).sqrMagnitude > 1e-6f ? (end - start).normalized : Vector3.forward;
 
-        // 시작 스냅 처리
         if (_startSnapped)
         {
             if (_startSnapIsEndpoint)
             {
-                // 시작점 엔드포인트: 기존 접선을 "동일방향 강제"하지 않고, 기본 접선 사용(필요 시 부호 선택은 아래 규칙과 동일 로직을 써도 됨)
                 startHint = AlignToTargetDir(_startSnapTangent, start, end);
             }
             else
             {
-                // 시작점 중앙 스냅: 진행방향에 가장 가까운 수직방향 선택
                 startHint = ChoosePerpendicular(_startSnapTangent, abDir);
             }
         }
-
-        // 종료 스냅 처리
         if (endSnapped)
         {
             if (eIsEnd)
             {
-                // 엔드포인트에 붙을 때, 기존 접선을 '접근 방향(End->Start)'과 같은 방향으로 뒤집지 말고
-                // '반대 방향'이 되도록 부호를 선택 → 동일방향으로 미끄러지듯 이어지던 문제 방지
                 endHint = AvoidCoDirectional(eTan, start, end);
             }
             else
             {
-                // 중앙 스냅: 끝점에서의 접근 방향과 가장 맞는 수직방향으로 유도(직각 접속)
-                var approach = abDir; // (end - start).normalized
+                var approach = abDir;
                 endHint = ChoosePerpendicular(eTan, approach);
             }
             endTangentUsed = endHint;
         }
 
-        // 직선 모드이거나 힌트가 전혀 없으면 직선
         if (straightMode || (startHint == Vector3.zero && endHint == Vector3.zero))
             return BuildStraight(start, end);
 
-        // 힌트가 하나라도 있으면 베지어(없는 쪽은 AB방향으로 fallback)
+        if (wideArcMode && _startSnapped && _startSnapIsEndpoint)
+        {
+            return BuildWideArc(start, end, _startSnapTangent);
+        }
         return BuildBezier(start, end, startHint, endHint);
     }
 
-    // hint(접선 후보)를 from→to 진행 방향과 같은 쪽으로 정렬(부호 선택)
     private static Vector3 AlignToTargetDir(Vector3 hint, Vector3 from, Vector3 to)
     {
         if (hint == Vector3.zero) return Vector3.zero;
@@ -267,14 +328,12 @@ public class RoadBuilder : MonoBehaviour
         return (Vector3.Dot(hint, d) >= 0f) ? hint.normalized : (-hint.normalized);
     }
 
-    // 엔드포인트 접선 hint를 '접근 방향(End->Start)'과 동방향이면 뒤집어서 "반대"가 되도록 정규화
     private static Vector3 AvoidCoDirectional(Vector3 tangentAtEnd, Vector3 start, Vector3 end)
     {
         if (tangentAtEnd == Vector3.zero) return Vector3.zero;
         Vector3 approach = (start - end);
         if (approach.sqrMagnitude < 1e-6f) return tangentAtEnd.normalized;
 
-        // 동일 방향(내적 > 0)이면 반전, 아니면 그대로
         return (Vector3.Dot(tangentAtEnd, approach) > 0f)
             ? (-tangentAtEnd.normalized)
             : (tangentAtEnd.normalized);
@@ -293,16 +352,13 @@ public class RoadBuilder : MonoBehaviour
         return line;
     }
 
-    // roadTangent과 직교하는 두 방향 중, desiredDir과 더 잘 맞는 쪽을 선택
     private Vector3 ChoosePerpendicular(Vector3 roadTangent, Vector3 desiredDir)
     {
         if (roadTangent == Vector3.zero) return Vector3.zero;
         if (desiredDir == Vector3.zero) return Vector3.Cross(up, roadTangent).normalized;
 
-        var perpL = Vector3.Cross(up, roadTangent).normalized; // 왼쪽
-        var perpR = -perpL;                                     // 오른쪽
-
-        // desiredDir(원하는 진행/접근 방향)과 더 큰 내적을 갖는 쪽 선택
+        var perpL = Vector3.Cross(up, roadTangent).normalized;
+        var perpR = -perpL;
         return Vector3.Dot(desiredDir.normalized, perpL) >= Vector3.Dot(desiredDir.normalized, perpR)
             ? perpL : perpR;
     }
@@ -333,7 +389,41 @@ public class RoadBuilder : MonoBehaviour
         float u = 1f - t;
         return u * u * u * p0 + 3f * u * u * t * p1 + 3f * u * t * t * p2 + t * t * t * p3;
     }
+    #endregion
 
+    #region Alt Curve Generation (Sin Wave)
+    private List<Vector3> BuildWideArc(Vector3 start, Vector3 end, Vector3 previousDirection)
+    {
+        var line = new List<Vector3>(64);
+        Vector3 displacement = end - start;
+        float distance = displacement.magnitude;
+        
+        if (distance < 0.001f) return BuildStraight(start, end);
+        
+        Vector3 prevDir = previousDirection.normalized;
+        Vector3 cross = Vector3.Cross(prevDir, displacement.normalized);
+        bool cursorOnRight = Vector3.Dot(cross, up) > 0;
+        float curveDirection = cursorOnRight ? 1f : -1f;
+        float curveAmplitude = distance * altCurveStrength;
+        Vector3 perpendicular = Vector3.Cross(displacement.normalized, up).normalized;
+        int steps = Mathf.Max(8, Mathf.CeilToInt(distance * samplesPerMeter));
+        
+        for (int i = 0; i <= steps; i++)
+        {
+            float t = i / (float)steps;
+            
+            Vector3 straightPoint = Vector3.Lerp(start, end, t);
+            float sinOffset = Mathf.Sin(t * Mathf.PI) * curveAmplitude * curveDirection;
+            Vector3 curvePoint = straightPoint + perpendicular * sinOffset;
+            
+            line.Add(curvePoint);
+        }
+        
+        return line;
+    }
+    #endregion
+
+    #region Road Generation & Mesh
     private void UpdatePreview(List<Vector3> centerline)
     {
         if (centerline == null || centerline.Count < 2)
@@ -419,7 +509,6 @@ public class RoadBuilder : MonoBehaviour
         mc.sharedMesh = mesh;
         mc.convex = false;
 
-        // keep references
         road.AddChunk(go, new List<Vector3>(centerline));
         _chunks.Add(new RoadChunkRef { go = go, mesh = mesh });
     }
@@ -434,7 +523,6 @@ public class RoadBuilder : MonoBehaviour
         var go = hit.collider ? hit.collider.gameObject : null;
         if (!go) return;
 
-        // remove from global chunk list
         for (int i = 0; i < _chunks.Count; i++)
         {
             if (_chunks[i].go == go)
@@ -444,15 +532,14 @@ public class RoadBuilder : MonoBehaviour
             }
         }
 
-        // remove from its Road component
         var road = go.GetComponentInParent<RoadComponent>();
         if (road) road.RemoveChunk(go);
 
         Destroy(go);
     }
+    #endregion
 
-    // Snapping ------------------------------------------------------------
-
+    #region Snapping
     private bool TryFindSnap(Vector3 query, out Vector3 snapPoint, out Vector3 snapTangent, out bool isEndpoint)
     {
         snapPoint = default;
@@ -510,7 +597,6 @@ public class RoadBuilder : MonoBehaviour
                 pt = p;
                 tangent = ab.normalized;
 
-                // true endpoint if projection exactly near ends or equals first/last
                 endpoint = (t <= 1e-3f) || (t >= 1f - 1e-3f) ||
                             (Vector3.Distance(p, poly[0]) < 1e-3f) ||
                             (Vector3.Distance(p, poly[poly.Count - 1]) < 1e-3f);
@@ -518,8 +604,6 @@ public class RoadBuilder : MonoBehaviour
         }
         return dist < float.MaxValue;
     }
-
-    // Mesh ----------------------------------------------------------------
 
     private static Mesh MeshFromCenterline(List<Vector3> cl, float width, float uvPerM, Vector3 up)
     {
@@ -573,7 +657,9 @@ public class RoadBuilder : MonoBehaviour
         mesh.RecalculateBounds();
         return mesh;
     }
+    #endregion
 
+    #region Utilities
     private static void SetMaterialColor(Renderer r, Color c)
     {
         if (r && r.sharedMaterial && r.sharedMaterial.HasProperty("_Color"))
@@ -592,12 +678,13 @@ public class RoadBuilder : MonoBehaviour
         return (n >= 2 && (cl[n - 1] - cl[n - 2]).sqrMagnitude > 1e-6f)
             ? (cl[n - 1] - cl[n - 2]).normalized : DirectionAtStart(cl);
     }
+    #endregion
 
-    // Data ----------------------------------------------------------------
-
+    #region Data
     private struct RoadChunkRef
     {
         public GameObject go;
         public Mesh mesh;
     }
+    #endregion
 }
