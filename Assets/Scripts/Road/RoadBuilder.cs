@@ -497,6 +497,7 @@ public class RoadBuilder : MonoBehaviour
     {
         var go = new GameObject($"RoadChunk_{road.Chunks.Count}");
         go.transform.SetParent(parent, false);
+        go.layer = gameObject.layer;
 
         var mf = go.AddComponent<MeshFilter>();
         var mr = go.AddComponent<MeshRenderer>();
