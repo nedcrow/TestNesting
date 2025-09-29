@@ -147,7 +147,7 @@ namespace Hanok
                 // 이후 클릭에는 새로운 버텍스 추가
                 plotCreator.AddVertex(CurrentWorldPosition);
             }
-            CurrentPlotVertices = plotCreator.PlotVertices;
+            CurrentPlotVertices = plotCreator.GetVertexPositions();
         }
 
         private void OnRightClick()
@@ -155,9 +155,9 @@ namespace Hanok
             if (!IsPlotActive || plotCreator == null) return;
 
             plotCreator.RemoveLastVertex();
-            CurrentPlotVertices = plotCreator.PlotVertices;
+            CurrentPlotVertices = plotCreator.GetVertexPositions();
 
-            switch (plotCreator.PlotVertices.Count)
+            switch (plotCreator.PlotVertices?.Count ?? 0)
             {
                 case 3:
                     plotDivider.ClearSemiPlotPreview();
@@ -173,7 +173,7 @@ namespace Hanok
         {
             // Finalize current plot
             if (plotCreator == null || !IsPlotActive) return;
-            if (plotCreator.PlotVertices.Count < 3) return;
+            if ((plotCreator.PlotVertices?.Count ?? 0) < 3) return;
 
             // TODO: Implement plot finalization logic
             IsPlotActive = false;
@@ -208,13 +208,13 @@ namespace Hanok
                 if (IsPlotActive && plotCreator != null && IsCursorOnValidLayer && CurrentWorldPosition != Vector3.zero)
                 {
                     plotCreator.UpdateVertexPosition(CurrentWorldPosition);
-                    CurrentPlotVertices = plotCreator.PlotVertices;
+                    CurrentPlotVertices = plotCreator.GetVertexPositions();
                     
                     // 2개 이상 버텍스일 때 분할 마커 표시
                     // (2개: 마커만, 3개: 마커만, 4개: 마커+semiPlot)
-                    if (CurrentHouse != null && plotCreator.PlotVertices.Count >= 2 && plotDivider != null)
+                    if (CurrentHouse != null && (plotCreator.PlotVertices?.Count ?? 0) >= 2 && plotDivider != null)
                     {
-                        plotDivider.ShowEdgeMarkersPreview(plotCreator.PlotVertices, CurrentHouse.MinimumLength, CurrentHouse.MaximumLength, plotCreator.transform);
+                        plotDivider.ShowEdgeMarkersPreview(plotCreator.GetVertexPositions(), CurrentHouse.MinimumLength, CurrentHouse.MaximumLength, plotCreator.transform);
                     }
                     else
                     {

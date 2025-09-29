@@ -172,8 +172,8 @@ MonoBehaviour:
   houseCreator: {fileID: 1689491064}
   validLayer:
     serializedVersion: 2
-    m_Bits: 8
-  <IsConstructionMode>k__BackingField: 1
+    m_Bits: 72
+  <IsConstructionMode>k__BackingField: 0
   <IsPlotActive>k__BackingField: 0
   <IsCursorOnValidLayer>k__BackingField: 0
   <CurrentHouse>k__BackingField: {fileID: 3009073232824029118, guid: a5bf3626a8673ec499d2023eaa17c906, type: 3}
@@ -747,7 +747,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1871433683}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 53a1cf23f0c5b3841a49c0e683665bc2, type: 3}
   m_Name: 
@@ -761,12 +761,17 @@ MonoBehaviour:
   uvTilingPerMeter: 1
   samplesPerMeter: 1.5
   handleLenRatio: 0.25
-  maxHandleLen: 8
-  segmentLength: 6
+  maxHandleLen: 6
+  altCurveStrength: 0.2
+  segmentLength: 4
   snapDistance: 2
   up: {x: 0, y: 0, z: 0}
   previewColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
   _buildModeEnabled: 1
+  _startSnapped: 0
+  _endSnapped: 0
+  _startSnapTangent: {x: 0, y: 0, z: 0}
+  _startSnapIsEndpoint: 0
 --- !u!4 &1871433685
 Transform:
   m_ObjectHideFlags: 0
@@ -829,9 +834,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Hanok.PlotDefinitionController
   lineMaterial: {fileID: 0}
   fillMaterial: {fileID: 0}
-  snapToRoadDistance: 2
-  enableRoadSnapping: 0
-  enableRoadCurving: 1
+  enableMeshSnap: 1
+  snapLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
+  snapDistance: 1
+  enableAutoCurveExploration: 1
+  debugPlotVertices: []
+  debugFilteredVertices: []
 --- !u!114 &2067919898
 MonoBehaviour:
   m_ObjectHideFlags: 0
