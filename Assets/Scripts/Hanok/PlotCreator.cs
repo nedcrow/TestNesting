@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UtilLibrary;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -54,47 +55,23 @@ namespace Hanok
 
         public Vector3 GetPositionForCurve(RoadComponent targetRoad)
         {
-            foreach (var info in snapInfos)
-            {
-                if (info.snappedRoad == targetRoad)
-                {
-                    return info.snappedPosition;
-                }
-            }
-            return snapInfos.Count > 0 ? snapInfos[0].snappedPosition : Vector3.zero;
+            if (snapInfos == null || snapInfos.Count == 0) return Vector3.zero;
+
+            var targetInfo = snapInfos.FirstOrDefault(info => info.snappedRoad == targetRoad);
+            return targetInfo.snappedRoad != null ? targetInfo.snappedPosition :
+                   snapInfos.FirstOrDefault().snappedPosition;
         }
 
         public SnapInfo GetSnapInfoForRoad(RoadComponent targetRoad)
         {
-            foreach (var info in snapInfos)
-            {
-                if (info.snappedRoad == targetRoad)
-                {
-                    return info;
-                }
-            }
-            return snapInfos.Count > 0 ? snapInfos[0] : default(SnapInfo);
+            if (snapInfos == null || targetRoad == null) return default(SnapInfo);
+
+            return snapInfos.FirstOrDefault(info => info.snappedRoad == targetRoad);
         }
 
-        public List<Vector3> GetAllPositions()
-        {
-            List<Vector3> positions = new List<Vector3>();
-            foreach (var info in snapInfos)
-            {
-                positions.Add(info.snappedPosition);
-            }
-            return positions;
-        }
+        public List<Vector3> GetAllPositions() => snapInfos?.Select(info => info.snappedPosition).ToList() ?? new List<Vector3>();
 
-        public List<RoadComponent> GetAllRoads()
-        {
-            List<RoadComponent> roads = new List<RoadComponent>();
-            foreach (var info in snapInfos)
-            {
-                roads.Add(info.snappedRoad);
-            }
-            return roads;
-        }
+        public List<RoadComponent> GetAllRoads() => snapInfos?.Select(info => info.snappedRoad).ToList() ?? new List<RoadComponent>();
 
         // 호환성을 위한 프로퍼티
         public List<Vector3> snappedPositions => GetAllPositions();
@@ -104,44 +81,48 @@ namespace Hanok
 
     public class PlotCreator : MonoBehaviour
     {
-        #region Inspector Fields
+        #region Configuration & Properties
+
+        // Constants
+        private const float SNAP_TOLERANCE = 0.2f;
+        private const int CURVE_SEGMENTS_PER_SECTION = 4;
+        private const float DEFAULT_LINE_WIDTH = 0.4f;
+        private const float SHARP_ANGLE_THRESHOLD = 50f;
+
+        // Static collections for memory optimization
+        private static readonly List<Vector3> EmptyVectorList = new List<Vector3>();
+        private static readonly List<bool> EmptyBoolList = new List<bool>();
+
+        [Header("Materials & Rendering")]
         [SerializeField] private Material lineMaterial;
         [SerializeField] private Material fillMaterial;
 
-        [Header("Mesh Snap Settings")]
+        [Header("Snap Settings")]
         [SerializeField] private LayerMask snapLayerMask = -1;
         [SerializeField] private float snapDistance = 1.5f;
-        #endregion
 
-        #region Public Properties
+        [Header("Plot Settings")]
         [Min(3)]
         public int MaxCountOfVertex { get; private set; } = 4;
+        [SerializeField] private bool enableAutoCurveExploration = true;
+
+        // Core Properties
         public List<PlotVertex> PlotVertices { get; private set; }
         public Mesh PlotMesh { get; private set; }
 
-        [SerializeField] private bool enableAutoCurveExploration = true;
-
-        // 호환성 및 편의성을 위한 프로퍼티들
+        // Convenience Properties
         public List<Vector3> VertexPositions => GetVertexPositions();
-        public List<bool> IsVertexSnapped => PlotVertices?.Select(v => v.isSnapped).ToList() ?? new List<bool>();
-        public List<bool> VertexSnapStates => PlotVertices?.Select(v => v.isSnapped).ToList() ?? new List<bool>();
+        public List<bool> VertexSnapStates => PlotVertices?.Select(v => v.isSnapped).ToList() ?? EmptyBoolList;
         public Color LineColor { get; set; } = Color.white;
         public Color FillColor { get; set; } = new Color(1f, 1f, 1f, 0.3f);
 
-        #endregion
-
-        #region Debug Info (Inspector)
-        [Header("Debug - Plot Vertices")]
-        [SerializeField] private List<PlotVertex> debugPlotVertices = new List<PlotVertex>(); // Inspector에서 확인 가능
-        [SerializeField] private List<Vector3> debugFilteredVertices = new List<Vector3>(); // Inspector에서 확인 가능
+        [Header("Debug Info")]
+        [SerializeField] private List<PlotVertex> debugPlotVertices = new List<PlotVertex>();
         #endregion
 
         #region Private Fields
         // Renderer components
         private LineRenderer[] lineRenderers; // 각 변(edge)에 대한 별도 LineRenderer
-        private LineRenderer debugCollisionCheckLR; // 충돌체크 위치 디버그용 LineRenderer
-        private LineRenderer[] debugTestLineLRs; // 테스트 선들용 LineRenderer 배열 (4개)
-        private LineRenderer debugPerpendicularLR; // PlotCenter에서 직선까지의 수직선용 LineRenderer
         private MeshRenderer meshRenderer;
         private MeshFilter meshFilter;
 
@@ -166,6 +147,25 @@ namespace Hanok
             UpdatePlotVisualization();
         }
 
+        private void InitializeMaterials()
+        {
+            if (lineMaterial == null)
+            {
+                lineMaterial = new Material(Shader.Find("Sprites/Default"))
+                {
+                    color = LineColor
+                };
+            }
+
+            if (fillMaterial == null)
+            {
+                fillMaterial = new Material(Shader.Find("Sprites/Default"))
+                {
+                    color = FillColor
+                };
+            }
+        }
+
         private void InitializeRenderers()
         {
             InitializeLineRenderer();
@@ -187,70 +187,12 @@ namespace Hanok
 
                 LineRenderer lr = edgeObj.AddComponent<LineRenderer>();
                 lr.material = lineMaterial;
-                lr.startWidth = 0.4f;
-                lr.endWidth = 0.4f;
+                lr.startWidth = DEFAULT_LINE_WIDTH;
+                lr.endWidth = DEFAULT_LINE_WIDTH;
                 lr.useWorldSpace = true;
                 lr.positionCount = 0;
 
                 lineRenderers[i] = lr;
-            }
-
-            // 충돌체크 디버그용 LineRenderer 생성
-            InitializeDebugCollisionCheckLR();
-        }
-
-        private void InitializeDebugCollisionCheckLR()
-        {
-            // 자유 경로 연결선용 LineRenderer
-            if (debugCollisionCheckLR == null)
-            {
-                GameObject debugObj = new GameObject("Debug_CollisionCheck");
-                debugObj.transform.SetParent(transform);
-
-                debugCollisionCheckLR = debugObj.AddComponent<LineRenderer>();
-                debugCollisionCheckLR.material = lineMaterial;
-                debugCollisionCheckLR.startWidth = 0.1f;
-                debugCollisionCheckLR.endWidth = 0.1f;
-                debugCollisionCheckLR.useWorldSpace = true;
-                debugCollisionCheckLR.positionCount = 0;
-                debugCollisionCheckLR.material.color = Color.cyan; // 청록색으로 구분
-            }
-
-            // 테스트 선들용 LineRenderer 배열 (4개)
-            if (debugTestLineLRs == null)
-            {
-                debugTestLineLRs = new LineRenderer[4];
-                string[] testNames = { "A_Right", "A_Left", "B_Right", "B_Left" };
-
-                for (int i = 0; i < 4; i++)
-                {
-                    GameObject testObj = new GameObject($"Debug_Test_{testNames[i]}");
-                    testObj.transform.SetParent(transform);
-
-                    LineRenderer testLR = testObj.AddComponent<LineRenderer>();
-                    testLR.material = lineMaterial;
-                    testLR.startWidth = 0.08f;
-                    testLR.endWidth = 0.08f;
-                    testLR.useWorldSpace = true;
-                    testLR.positionCount = 0;
-
-                    debugTestLineLRs[i] = testLR;
-                }
-            }
-
-            // PlotCenter 수직선용 LineRenderer
-            if (debugPerpendicularLR == null)
-            {
-                GameObject perpObj = new GameObject("Debug_Perpendicular");
-                perpObj.transform.SetParent(transform);
-
-                debugPerpendicularLR = perpObj.AddComponent<LineRenderer>();
-                debugPerpendicularLR.material = lineMaterial;
-                debugPerpendicularLR.startWidth = 0.12f;
-                debugPerpendicularLR.endWidth = 0.12f;
-                debugPerpendicularLR.useWorldSpace = true;
-                debugPerpendicularLR.positionCount = 0;
-                debugPerpendicularLR.material.color = Color.magenta; // 마젠타색으로 구분
             }
         }
 
@@ -290,51 +232,14 @@ namespace Hanok
                 lineRenderers = null;
             }
 
-            // 디버그 충돌체크 LineRenderer도 정리
-            if (debugCollisionCheckLR != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(debugCollisionCheckLR.gameObject);
-                else
-                    DestroyImmediate(debugCollisionCheckLR.gameObject);
-                debugCollisionCheckLR = null;
-            }
-
-            // 디버그 테스트 LineRenderer 배열도 정리
-            if (debugTestLineLRs != null)
-            {
-                for (int i = 0; i < debugTestLineLRs.Length; i++)
-                {
-                    if (debugTestLineLRs[i] != null)
-                    {
-                        if (Application.isPlaying)
-                            Destroy(debugTestLineLRs[i].gameObject);
-                        else
-                            DestroyImmediate(debugTestLineLRs[i].gameObject);
-                    }
-                }
-                debugTestLineLRs = null;
-            }
-
-            // 디버그 수직선 LineRenderer도 정리
-            if (debugPerpendicularLR != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(debugPerpendicularLR.gameObject);
-                else
-                    DestroyImmediate(debugPerpendicularLR.gameObject);
-                debugPerpendicularLR = null;
-            }
-
             // edgeCurvePaths도 함께 정리
             edgeCurvePaths.Clear();
         }
 
-        #region Vertex Management
+        #region Vertex Management & Data Access
         public void AddVertex(Vector3 position)
         {
-            if (PlotVertices == null) return;
-            if (PlotVertices.Count >= MaxCountOfVertex) return;
+            if (PlotVertices == null || PlotVertices.Count >= MaxCountOfVertex) return;
 
             PlotVertices.Add(SnapToRoadVertex(position));
 
@@ -443,30 +348,6 @@ namespace Hanok
             // 곡선 경로 정보도 정리
             edgeCurvePaths.Clear();
 
-            // 디버그 충돌체크 LineRenderer도 비활성화
-            if (debugCollisionCheckLR != null)
-            {
-                debugCollisionCheckLR.positionCount = 0;
-            }
-
-            // 디버그 테스트 LineRenderer 배열도 비활성화
-            if (debugTestLineLRs != null)
-            {
-                for (int i = 0; i < debugTestLineLRs.Length; i++)
-                {
-                    if (debugTestLineLRs[i] != null)
-                    {
-                        debugTestLineLRs[i].positionCount = 0;
-                    }
-                }
-            }
-
-            // 디버그 수직선 LineRenderer도 비활성화
-            if (debugPerpendicularLR != null)
-            {
-                debugPerpendicularLR.positionCount = 0;
-            }
-
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
             UpdateDebugInfo();
 
@@ -479,7 +360,7 @@ namespace Hanok
         public List<Vector3> GetVertexPositions()
         {
             if (PlotVertices == null || PlotVertices.Count == 0)
-                return new List<Vector3>();
+                return EmptyVectorList;
 
             List<Vector3> positions = new List<Vector3>(PlotVertices.Count);
             for (int i = 0; i < PlotVertices.Count; i++)
@@ -585,8 +466,23 @@ namespace Hanok
                     bestLineType = SnapLineType.LeftEdge;
                 }
 
-                // 유효한 스냅이 있으면 추가
-                if (bestDist <= snapDistance)
+                // 이전 점이 같은 roadComponent의 다른 edge에 있으면 필터링
+                bool shouldFilter = false;
+                if (PlotVertices.Count > 0)
+                {
+                    var prevVertex = PlotVertices[PlotVertices.Count - 1];
+                    if (prevVertex.isSnapped && prevVertex.snapInfos.Count > 0)
+                    {
+                        var prevSnapInfo = prevVertex.snapInfos[0];
+                        if (prevSnapInfo.snappedRoad == road && prevSnapInfo.snappedLine != bestLineType)
+                        {
+                            shouldFilter = true;
+                        }
+                    }
+                }
+
+                // 유효한 스냅이 있고 필터링되지 않으면 추가
+                if (bestDist <= snapDistance && !shouldFilter)
                 {
                     snapInfos.Add(new SnapInfo(bestPosition, road, bestLineType));
                     wasSnapped = true;
@@ -619,24 +515,6 @@ namespace Hanok
             return closestPos;
         }
         #endregion
-        private void InitializeMaterials()
-        {
-            if (lineMaterial == null)
-            {
-                lineMaterial = new Material(Shader.Find("Sprites/Default"))
-                {
-                    color = LineColor
-                };
-            }
-
-            if (fillMaterial == null)
-            {
-                fillMaterial = new Material(Shader.Find("Sprites/Default"))
-                {
-                    color = FillColor
-                };
-            }
-        }
 
         #region Visualization
         private void UpdatePlotVisualization()
@@ -783,16 +661,26 @@ namespace Hanok
         }
         #endregion        
 
-        #region Curve Vertex Exploration
+        #region Curve Generation & Path Finding
+        // This region handles all curve-related functionality:
+        // - Curve Math & Smoothing: Basic curve calculations and Catmull-Rom splines
+        // - Main Curve Exploration: Primary entry point for curve generation between vertices
+        // - Curve Analysis & Validation: Sharp curve detection and validation
+        // - Same-Road Curve Generation: Curves within single road components
+        // - Different-Road Curve Generation: Complex pathfinding across multiple roads
+        // - Geometric Utility Functions: Line intersection and geometric calculations
+
+        // ==================== Curve Math & Smoothing ====================
+
         /// <summary>
         /// 주어진 점들을 부드러운 곡선으로 변환
         /// </summary>
         private List<Vector3> GenerateSmoothCurve(List<Vector3> controlPoints)
         {
-            if (controlPoints.Count < 2) return controlPoints;
+            if (controlPoints == null || controlPoints.Count < 2) return controlPoints ?? EmptyVectorList;
 
             List<Vector3> smoothedPoints = new List<Vector3>();
-            int segmentsPerCurve = 4; // 각 구간당 세분화 수
+            int segmentsPerCurve = CURVE_SEGMENTS_PER_SECTION; // 각 구간당 세분화 수
 
             for (int i = 0; i < controlPoints.Count - 1; i++)
             {
@@ -832,6 +720,8 @@ namespace Hanok
             );
         }
 
+        // ==================== Main Curve Exploration ====================
+
         /// <summary>
         /// 인접한 두 점이 모두 snap된 상태일 때 두 점 사이의 연결된 도로들을 탐색하여 curve path를 생성
         /// </summary>
@@ -840,8 +730,7 @@ namespace Hanok
             // 두 점이 모두 snap된 상태인지 확인
             if (!PlotVertices[startVertexIndex].isSnapped || !PlotVertices[endVertexIndex].isSnapped)
             {
-                Debug.Log("Both vertices must be snapped to generate curve");
-                return new List<Vector3>();
+                return EmptyVectorList;
             }
 
             // 시작점과 끝점 정보 가져오기
@@ -850,40 +739,75 @@ namespace Hanok
 
             if (startVertex.snappedRoads.Count == 0 || endVertex.snappedRoads.Count == 0)
             {
-                Debug.Log("No snapped roads found for curve generation");
-                return new List<Vector3>();
+                return EmptyVectorList;
             }
 
             // 공통 도로가 있는지 확인 (같은 도로에서 시작과 끝이 모두 snap된 경우)
             RoadComponent commonRoad = FindCommonRoad(startVertex.snappedRoads, endVertex.snappedRoads);
 
+            List<Vector3> curvePoints;
             if (commonRoad != null)
             {
                 // 같은 도로 내에서 곡선 생성
-                return GenerateCurveWithinSameRoad(startVertex, endVertex, commonRoad);
+                curvePoints = GenerateCurveWithinSameRoad(startVertex, endVertex, commonRoad);
             }
             else
             {
                 // 서로 다른 도로 간 곡선 생성
-                return GenerateCurveBetweenDifferentRoads(startVertex, endVertex);
+                curvePoints = GenerateCurveBetweenDifferentRoads(startVertex, endVertex);
             }
-        }
 
-        /// <summary>
-        /// 두 도로 리스트에서 공통 도로를 찾습니다
-        /// </summary>
-        private RoadComponent FindCommonRoad(List<RoadComponent> roadsA, List<RoadComponent> roadsB)
-        {
-            foreach (var roadA in roadsA)
+            // 급커브 개수 분석 및 로그 출력
+            if (curvePoints.Count > 2)
             {
-                foreach (var roadB in roadsB)
+                int sharpCurveCount = CountSharpCurves(curvePoints);
+
+                // 급커브가 발견되면 직선으로 처리 (빈 리스트 반환)
+                if (sharpCurveCount > 0)
                 {
-                    if (roadA == roadB)
-                        return roadA;
+                    Debug.Log($"[Curve Analysis] {sharpCurveCount} Sharp curves detected, from ({startVertexIndex}->{endVertexIndex})");
+                    return EmptyVectorList;
                 }
             }
-            return null;
+
+            return curvePoints;
         }
+
+        // ==================== Curve Analysis & Validation ====================
+
+        /// <summary>
+        /// 곡선에서 급커브 개수를 계산합니다
+        /// </summary>
+        /// <param name="curvePoints">곡선을 구성하는 점들</param>
+        /// <param name="sharpAngleThreshold">급커브로 판단할 각도 임계값 (도 단위, 기본 90도)</param>
+        /// <returns>급커브 개수</returns>
+        private int CountSharpCurves(List<Vector3> curvePoints, float sharpAngleThreshold = SHARP_ANGLE_THRESHOLD)
+        {
+            if (curvePoints == null || curvePoints.Count < 3)
+                return 0;
+
+            int sharpCurveCount = 0;
+
+            for (int i = 1; i < curvePoints.Count - 1; i++)
+            {
+                Vector3 prevPoint = curvePoints[i - 1];
+                Vector3 currentPoint = curvePoints[i];
+                Vector3 nextPoint = curvePoints[i + 1];
+
+                // 유틸리티 라이브러리 함수 사용
+                int angleInDegrees = Mathf.RoundToInt(VectorAngleUtils.GetAngleAtPointDegrees(prevPoint, currentPoint, nextPoint));
+
+                // 꺾이는 각도가 임계값보다 크면 급커브로 판단
+                if (sharpAngleThreshold < angleInDegrees)
+                {
+                    sharpCurveCount++;
+                }
+            }
+            return sharpCurveCount;
+        }
+
+
+        // ==================== Same-Road Curve Generation ====================
 
         /// <summary>
         /// 같은 도로 내에서 곡선을 생성합니다
@@ -902,11 +826,7 @@ namespace Hanok
                 List<Vector3> targetLine = GetEdgeLineByType(road, startInfo.snappedLine);
                 List<Vector3> curvePoints = ExtractPointsBetweenOnLine(targetLine, startPos, endPos);
 
-                if (curvePoints.Count > 2)
-                {
-                    Debug.Log($"Generated curve on {startInfo.snappedLine} line with {curvePoints.Count} points");
-                    return curvePoints;
-                }
+                if (curvePoints.Count > 2) return curvePoints;
             }
             else
             {
@@ -916,118 +836,10 @@ namespace Hanok
 
                 List<Vector3> curvePoints = CreateCurveAcrossLines(startLine, endLine, startPos, endPos);
 
-                if (curvePoints.Count > 2)
-                {
-                    Debug.Log($"Generated curve across {startInfo.snappedLine} to {endInfo.snappedLine} with {curvePoints.Count} points");
-                    return curvePoints;
-                }
+                if (curvePoints.Count > 2) return curvePoints;
             }
 
-            return new List<Vector3>(); // 직선으로 처리
-        }
-
-        /// <summary>
-        /// 라인 타입에 따라 해당 엣지 라인을 반환합니다
-        /// </summary>
-        private List<Vector3> GetEdgeLineByType(RoadComponent road, SnapLineType lineType)
-        {
-            switch (lineType)
-            {
-                case SnapLineType.LeftEdge:
-                    return road.LeftEdgeLine;
-                case SnapLineType.RightEdge:
-                    return road.RightEdgeLine;
-                default:
-                    return road.LeftEdgeLine;
-            }
-        }
-
-        /// <summary>
-        /// 같은 라인에서 두 점 사이의 점들을 추출합니다
-        /// </summary>
-        private List<Vector3> ExtractPointsBetweenOnLine(List<Vector3> line, Vector3 startPos, Vector3 endPos)
-        {
-            List<Vector3> points = new List<Vector3>();
-            const float tolerance = 0.2f;
-
-            if (line == null || line.Count < 2)
-                return points;
-
-            // 1단계: 시작점과 끝점의 인덱스 찾기
-            int startIndex = -1;
-            int endIndex = -1;
-            float closestStartDist = float.MaxValue;
-            float closestEndDist = float.MaxValue;
-
-            for (int i = 0; i < line.Count; i++)
-            {
-                Vector3 linePoint = line[i];
-
-                // 시작점에 가장 가까운 인덱스 찾기
-                float distToStart = Vector3.Distance(linePoint, startPos);
-                if (distToStart <= tolerance && distToStart < closestStartDist)
-                {
-                    closestStartDist = distToStart;
-                    startIndex = i;
-                }
-
-                // 끝점에 가장 가까운 인덱스 찾기
-                float distToEnd = Vector3.Distance(linePoint, endPos);
-                if (distToEnd <= tolerance && distToEnd < closestEndDist)
-                {
-                    closestEndDist = distToEnd;
-                    endIndex = i;
-                }
-            }
-
-            // 유효한 인덱스를 찾지 못한 경우
-            if (startIndex == -1 || endIndex == -1)
-            {
-                Debug.Log($"Could not find valid indices on line. startIndex: {startIndex}, endIndex: {endIndex}");
-                return points;
-            }
-
-            // 2단계: 인덱스 범위 결정 (항상 작은 인덱스부터 큰 인덱스까지)
-            int minIndex = Mathf.Min(startIndex, endIndex);
-            int maxIndex = Mathf.Max(startIndex, endIndex);
-            bool needReverse = startIndex > endIndex;
-
-            // 시작점 추가
-            points.Add(startPos);
-
-            // minIndex+1부터 maxIndex-1까지 중간 점들 수집
-            for (int i = minIndex + 1; i < maxIndex; i++)
-            {
-                Vector3 linePoint = line[i];
-
-                // 시작점/끝점과 너무 가까운 중간점은 제외
-                if (Vector3.Distance(linePoint, startPos) > tolerance &&
-                    Vector3.Distance(linePoint, endPos) > tolerance)
-                {
-                    points.Add(linePoint);
-                }
-            }
-
-            // 끝점 추가
-            points.Add(endPos);
-
-            // 필요하면 중간 점들만 뒤집기 (시작점과 끝점은 그대로 유지)
-            if (needReverse && points.Count > 2)
-            {
-                // 시작점(0)과 끝점(마지막)을 제외한 중간 부분만 뒤집기
-                List<Vector3> middlePoints = points.GetRange(1, points.Count - 2);
-                middlePoints.Reverse();
-
-                // 다시 조합: 시작점 + 뒤집힌 중간점들 + 끝점
-                List<Vector3> reversedPoints = new List<Vector3> { points[0] };
-                reversedPoints.AddRange(middlePoints);
-                reversedPoints.Add(points[points.Count - 1]);
-
-                points = reversedPoints;
-            }
-
-            Debug.Log($"Extracted {points.Count} points from line. Direction: {(needReverse ? "Reverse" : "Forward")}, StartIdx: {startIndex}, EndIdx: {endIndex}");
-            return points;
+            return EmptyVectorList; // 직선으로 처리
         }
 
         /// <summary>
@@ -1051,51 +863,7 @@ namespace Hanok
             return points;
         }
 
-        /// <summary>
-        /// 라인에서 특정 점의 방향을 계산합니다
-        /// </summary>
-        private Vector3 GetDirectionAtPoint(List<Vector3> line, Vector3 point)
-        {
-            if (line == null || line.Count < 2)
-                return Vector3.forward;
-
-            // 가장 가까운 라인 세그먼트의 방향 반환
-            float closestDistance = float.MaxValue;
-            Vector3 direction = Vector3.forward;
-
-            for (int i = 0; i < line.Count - 1; i++)
-            {
-                Vector3 segmentStart = line[i];
-                Vector3 segmentEnd = line[i + 1];
-
-                float distToSegment = GetDistancePointToSegment(point, segmentStart, segmentEnd);
-                if (distToSegment < closestDistance)
-                {
-                    closestDistance = distToSegment;
-                    direction = (segmentEnd - segmentStart).normalized;
-                }
-            }
-
-            return direction;
-        }
-
-        /// <summary>
-        /// 점과 선분 사이의 최단 거리를 계산합니다
-        /// </summary>
-        private float GetDistancePointToSegment(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd)
-        {
-            Vector3 segmentVector = segmentEnd - segmentStart;
-            Vector3 pointVector = point - segmentStart;
-
-            float segmentLength = segmentVector.magnitude;
-            if (segmentLength < 0.001f)
-                return Vector3.Distance(point, segmentStart);
-
-            float t = Mathf.Clamp01(Vector3.Dot(pointVector, segmentVector) / (segmentLength * segmentLength));
-            Vector3 closestPointOnSegment = segmentStart + t * segmentVector;
-
-            return Vector3.Distance(point, closestPointOnSegment);
-        }
+        // ==================== Different-Road Curve Generation ====================
 
         /// <summary>
         /// 서로 다른 도로 간 곡선을 생성합니다
@@ -1117,8 +885,16 @@ namespace Hanok
             List<Vector3> startEdgeLine = GetEdgeLineByType(currentRoad, startInfo.snappedLine);
             Vector3 closestEndOfStartEdge = GetClosestEdgeEndToTarget(startEdgeLine, finalEndPos);
 
-            // 시작 엣지의 부분 경로 추가
+            // 시작 엣지의 부분 경로 추가 (교차점을 고려하여 고리 방지)
             List<Vector3> startEdgePath = ExtractPointsBetweenOnLine(startEdgeLine, currentPos, closestEndOfStartEdge);
+
+            // 중간 도로와의 교차점을 찾아서 시작 엣지 경로를 조정
+            RoadComponent nextRoadPreview = FindNextRoadFromPosition(closestEndOfStartEdge, currentRoad);
+            if (nextRoadPreview != null && startEdgePath.Count > 2)
+            {
+                startEdgePath = RemoveLoopFromEdge(startEdgePath, nextRoadPreview, "start");
+            }
+
             if (startEdgePath.Count > 1)
             {
                 totalPath.AddRange(startEdgePath.GetRange(0, startEdgePath.Count - 1)); // 끝점 제외
@@ -1137,14 +913,12 @@ namespace Hanok
                 RoadComponent nextRoad = FindNextRoadFromPosition(currentPos, currentRoad);
                 if (nextRoad == null)
                 {
-                    Debug.Log("No next road found, connecting directly to end");
                     break;
                 }
 
                 // 3-1. nextRoad가 도착점 road면 종료
                 if (nextRoad == targetRoad)
                 {
-                    Debug.Log("Reached target road");
                     break;
                 }
 
@@ -1153,13 +927,19 @@ namespace Hanok
                 Vector3 bestStartPoint, bestEndPoint;
                 FindBestEdgeOnRoad(nextRoad, currentPos, finalEndPos, out bestLineType, out bestStartPoint, out bestEndPoint);
 
-                // 4. 해당 엣지의 시작점과 끝점으로 경로 저장
+                // 4. 해당 엣지의 시작점과 끝점으로 경로 저장 (교차점을 고려하여 고리 방지)
                 List<Vector3> nextEdgeLine = GetEdgeLineByType(nextRoad, bestLineType);
                 List<Vector3> nextEdgePath = ExtractPointsBetweenOnLine(nextEdgeLine, bestStartPoint, bestEndPoint);
 
+                // 다음 도로와의 교차점을 확인하여 고리 제거
+                RoadComponent followingRoad = FindNextRoadFromPosition(bestEndPoint, nextRoad);
+                if (followingRoad != null && nextEdgePath.Count > 2)
+                {
+                    nextEdgePath = RemoveLoopFromEdge(nextEdgePath, followingRoad, "intermediate");
+                }
+
                 if (nextEdgePath.Count > 1)
                 {
-                    // 첫 번째 점 제외하고 추가 (연결점 중복 방지)
                     totalPath.AddRange(nextEdgePath.GetRange(1, nextEdgePath.Count - 1));
                 }
 
@@ -1167,14 +947,28 @@ namespace Hanok
                 currentRoad = nextRoad;
             }
 
-            // 6. 도착점 포함한 엣지에서 시작점에 가까운 엣지 끝까지 경로 저장
+            // 6. 도착점 포함한 엣지에서 시작점에 가까운 엣지 끝까지 경로 저장 (교차점을 고려하여 고리 방지)
             List<Vector3> endEdgeLine = GetEdgeLineByType(targetRoad, endInfo.snappedLine);
             Vector3 closestStartOfEndEdge = GetClosestEdgeEndToTarget(endEdgeLine, currentPos);
 
             List<Vector3> endEdgePath = ExtractPointsBetweenOnLine(endEdgeLine, closestStartOfEndEdge, finalEndPos);
+
+            // 이전 도로와의 교차점을 확인하여 고리 제거 (끝 엣지는 역방향으로 처리)
+            if (currentRoad != null && endEdgePath.Count > 2)
+            {
+                // 끝 엣지는 역순으로 처리하여 교차점 제거
+                List<Vector3> reversedEndPath = new List<Vector3>(endEdgePath);
+                reversedEndPath.Reverse();
+
+                List<Vector3> trimmedReversed = RemoveLoopFromEdge(reversedEndPath, currentRoad, "end");
+
+                // 다시 원래 순서로 되돌림
+                trimmedReversed.Reverse();
+                endEdgePath = trimmedReversed;
+            }
+
             if (endEdgePath.Count > 1)
             {
-                // 첫 번째 점 제외하고 추가 (연결점 중복 방지)
                 totalPath.AddRange(endEdgePath.GetRange(1, endEdgePath.Count - 1));
             }
             else
@@ -1182,8 +976,79 @@ namespace Hanok
                 totalPath.Add(finalEndPos);
             }
 
-            Debug.Log($"Generated cross-road curve with {totalPath.Count} points across {iterations} roads");
-            return totalPath.Count > 2 ? totalPath : new List<Vector3>();
+            return totalPath.Count > 2 ? totalPath : EmptyVectorList;
+        }
+
+        /// <summary>
+        /// 엣지와 다음 도로의 교차점을 찾아서 고리를 제거하는 통합 함수
+        /// </summary>
+        /// <param name="edgePath">처리할 엣지 경로</param>
+        /// <param name="nextRoad">다음 도로 컴포넌트</param>
+        /// <param name="edgeType">엣지 타입 (디버그용)</param>
+        /// <returns>고리가 제거된 엣지 경로</returns>
+        private List<Vector3> RemoveLoopFromEdge(List<Vector3> edgePath, RoadComponent nextRoad, string edgeType = "edge")
+        {
+            if (edgePath == null || edgePath.Count < 3 || nextRoad == null)
+                return edgePath;
+
+            // 다음 도로의 모든 엣지 라인들을 가져옴
+            List<List<Vector3>> nextRoadEdges = new List<List<Vector3>>
+            {
+                nextRoad.LeftEdgeLine,
+                nextRoad.RightEdgeLine
+            };
+
+            Vector3? intersectionPoint = null;
+            int intersectionIndex = -1;
+
+            // 엣지의 각 세그먼트와 다음 도로의 엣지들 간 교차점 찾기
+            for (int i = 0; i < edgePath.Count - 1; i++)
+            {
+                Vector3 segStart = edgePath[i];
+                Vector3 segEnd = edgePath[i + 1];
+
+                foreach (var nextEdgeLine in nextRoadEdges)
+                {
+                    if (nextEdgeLine == null || nextEdgeLine.Count < 2) continue;
+
+                    for (int j = 0; j < nextEdgeLine.Count - 1; j++)
+                    {
+                        Vector3 nextSegStart = nextEdgeLine[j];
+                        Vector3 nextSegEnd = nextEdgeLine[j + 1];
+
+                        Vector3? intersection = FindLineSegmentIntersection(segStart, segEnd, nextSegStart, nextSegEnd);
+                        if (intersection.HasValue)
+                        {
+                            intersectionPoint = intersection.Value;
+                            intersectionIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (intersectionPoint.HasValue) break;
+                }
+
+                if (intersectionPoint.HasValue) break;
+            }
+
+            // 교차점이 발견되면 해당 지점까지만 엣지 경로를 유지
+            if (intersectionPoint.HasValue && intersectionIndex >= 0)
+            {
+                List<Vector3> trimmedPath = new List<Vector3>();
+
+                // 교차점 이전의 점들 추가
+                for (int i = 0; i <= intersectionIndex; i++)
+                {
+                    trimmedPath.Add(edgePath[i]);
+                }
+
+                // 교차점 추가
+                trimmedPath.Add(intersectionPoint.Value);
+
+                return trimmedPath;
+            }
+
+            return edgePath;
         }
 
         /// <summary>
@@ -1258,6 +1123,206 @@ namespace Hanok
             }
         }
 
+
+        #endregion
+
+        #region Utillity
+        // ==================== Road Finding & Utility ====================
+
+        /// <summary>
+        /// 두 도로 리스트에서 공통 도로를 찾습니다
+        /// </summary>
+        private RoadComponent FindCommonRoad(List<RoadComponent> roadsA, List<RoadComponent> roadsB)
+        {
+            foreach (var roadA in roadsA)
+            {
+                foreach (var roadB in roadsB)
+                {
+                    if (roadA == roadB)
+                        return roadA;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 라인 타입에 따라 해당 엣지 라인을 반환합니다
+        /// </summary>
+        private List<Vector3> GetEdgeLineByType(RoadComponent road, SnapLineType lineType)
+        {
+            switch (lineType)
+            {
+                case SnapLineType.LeftEdge:
+                    return road.LeftEdgeLine;
+                case SnapLineType.RightEdge:
+                    return road.RightEdgeLine;
+                default:
+                    return road.LeftEdgeLine;
+            }
+        }
+
+        /// <summary>
+        /// 같은 라인에서 두 점 사이의 점들을 추출합니다
+        /// </summary>
+        private List<Vector3> ExtractPointsBetweenOnLine(List<Vector3> line, Vector3 startPos, Vector3 endPos)
+        {
+            if (line == null || line.Count < 2) return EmptyVectorList;
+
+            List<Vector3> points = new List<Vector3>();
+            const float tolerance = SNAP_TOLERANCE;
+
+            // 1단계: 시작점과 끝점의 인덱스 찾기
+            int startIndex = -1;
+            int endIndex = -1;
+            float closestStartDist = float.MaxValue;
+            float closestEndDist = float.MaxValue;
+
+            for (int i = 0; i < line.Count; i++)
+            {
+                Vector3 linePoint = line[i];
+
+                // 시작점에 가장 가까운 인덱스 찾기
+                float distToStart = Vector3.Distance(linePoint, startPos);
+                if (distToStart <= tolerance && distToStart < closestStartDist)
+                {
+                    closestStartDist = distToStart;
+                    startIndex = i;
+                }
+
+                // 끝점에 가장 가까운 인덱스 찾기
+                float distToEnd = Vector3.Distance(linePoint, endPos);
+                if (distToEnd <= tolerance && distToEnd < closestEndDist)
+                {
+                    closestEndDist = distToEnd;
+                    endIndex = i;
+                }
+            }
+
+            // 유효한 인덱스를 찾지 못한 경우
+            if (startIndex == -1 || endIndex == -1)
+            {
+                Debug.Log($"Could not find valid indices on line. startIndex: {startIndex}, endIndex: {endIndex}");
+                return points;
+            }
+
+            // 2단계: 인덱스 범위 결정 (항상 작은 인덱스부터 큰 인덱스까지)
+            int minIndex = Mathf.Min(startIndex, endIndex);
+            int maxIndex = Mathf.Max(startIndex, endIndex);
+            bool needReverse = startIndex > endIndex;
+
+            // 시작점 추가
+            points.Add(startPos);
+
+            // minIndex+1부터 maxIndex-1까지 중간 점들 수집
+            for (int i = minIndex + 1; i < maxIndex; i++)
+            {
+                Vector3 linePoint = line[i];
+
+                // 시작점/끝점과 너무 가까운 중간점은 제외
+                if (Vector3.Distance(linePoint, startPos) > tolerance &&
+                    Vector3.Distance(linePoint, endPos) > tolerance)
+                {
+                    points.Add(linePoint);
+                }
+            }
+
+            // 끝점 추가
+            points.Add(endPos);
+
+            // 필요하면 중간 점들만 뒤집기 (시작점과 끝점은 그대로 유지)
+            if (needReverse && points.Count > 2)
+            {
+                // 시작점(0)과 끝점(마지막)을 제외한 중간 부분만 뒤집기
+                List<Vector3> middlePoints = points.GetRange(1, points.Count - 2);
+                middlePoints.Reverse();
+
+                // 다시 조합: 시작점 + 뒤집힌 중간점들 + 끝점
+                List<Vector3> reversedPoints = new List<Vector3> { points[0] };
+                reversedPoints.AddRange(middlePoints);
+                reversedPoints.Add(points[points.Count - 1]);
+
+                points = reversedPoints;
+            }
+            return points;
+        }
+
+        /// <summary>
+        /// 라인에서 특정 점의 방향을 계산합니다
+        /// </summary>
+        private Vector3 GetDirectionAtPoint(List<Vector3> line, Vector3 point)
+        {
+            if (line == null || line.Count < 2)
+                return Vector3.forward;
+
+            // 가장 가까운 라인 세그먼트의 방향 반환
+            float closestDistance = float.MaxValue;
+            Vector3 direction = Vector3.forward;
+
+            for (int i = 0; i < line.Count - 1; i++)
+            {
+                Vector3 segmentStart = line[i];
+                Vector3 segmentEnd = line[i + 1];
+
+                float distToSegment = GetDistancePointToSegment(point, segmentStart, segmentEnd);
+                if (distToSegment < closestDistance)
+                {
+                    closestDistance = distToSegment;
+                    direction = (segmentEnd - segmentStart).normalized;
+                }
+            }
+
+            return direction;
+        }
+
+        /// <summary>
+        /// 점과 선분 사이의 최단 거리를 계산합니다
+        /// </summary>
+        private float GetDistancePointToSegment(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd)
+        {
+            Vector3 segmentVector = segmentEnd - segmentStart;
+            Vector3 pointVector = point - segmentStart;
+
+            float segmentLength = segmentVector.magnitude;
+            if (segmentLength < 0.001f)
+                return Vector3.Distance(point, segmentStart);
+
+            float t = Mathf.Clamp01(Vector3.Dot(pointVector, segmentVector) / (segmentLength * segmentLength));
+            Vector3 closestPointOnSegment = segmentStart + t * segmentVector;
+
+            return Vector3.Distance(point, closestPointOnSegment);
+        }
+
+        /// <summary>
+        /// 두 선분의 교차점을 찾습니다 (3D 공간에서 XZ 평면 기준)
+        /// </summary>
+        private Vector3? FindLineSegmentIntersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
+        {
+            // XZ 평면에서의 교차점 계산 (Y 좌표는 무시)
+            float x1 = p1.x, z1 = p1.z;
+            float x2 = p2.x, z2 = p2.z;
+            float x3 = p3.x, z3 = p3.z;
+            float x4 = p4.x, z4 = p4.z;
+
+            float denom = (x1 - x2) * (z3 - z4) - (z1 - z2) * (x3 - x4);
+            if (Mathf.Abs(denom) < 0.0001f) // 평행한 선분
+                return null;
+
+            float t = ((x1 - x3) * (z3 - z4) - (z1 - z3) * (x3 - x4)) / denom;
+            float u = -((x1 - x2) * (z1 - z3) - (z1 - z2) * (x1 - x3)) / denom;
+
+            // 두 선분이 실제로 교차하는지 확인 (매개변수가 0~1 범위 내)
+            if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
+            {
+                float intersectX = x1 + t * (x2 - x1);
+                float intersectZ = z1 + t * (z2 - z1);
+                float intersectY = p1.y + t * (p2.y - p1.y); // Y 좌표는 첫 번째 선분 기준으로 보간
+
+                return new Vector3(intersectX, intersectY, intersectZ);
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// 엣지 라인의 양 끝점 중 타겟에 더 가까운 점을 반환합니다
         /// </summary>
@@ -1274,258 +1339,6 @@ namespace Hanok
 
             return distToStart < distToEnd ? start : end;
         }
-
-        /// <summary>
-        /// 도로의 엣지 라인에서 두 점 사이의 점들을 추출합니다
-        /// </summary>
-        private List<Vector3> ExtractEdgePointsBetween(RoadComponent road, Vector3 startPos, Vector3 endPos)
-        {
-            List<Vector3> points = new List<Vector3>();
-            const float tolerance = 0.2f;
-
-            // 시작점에 더 가까운 엣지 라인 선택
-            List<Vector3> targetEdge = GetClosestEdgeToPoint(road, startPos);
-
-            if (targetEdge == null || targetEdge.Count < 2)
-                return points;
-
-            // 시작점과 끝점 사이의 엣지 포인트들 수집
-            bool collecting = false;
-            for (int i = 0; i < targetEdge.Count; i++)
-            {
-                Vector3 edgePoint = targetEdge[i];
-
-                // 시작점과 가까운 지점에서 수집 시작
-                if (!collecting && Vector3.Distance(edgePoint, startPos) <= tolerance)
-                {
-                    collecting = true;
-                    points.Add(startPos); // 정확한 시작점 추가
-                }
-
-                // 수집 중인 경우 점 추가
-                if (collecting)
-                {
-                    // 시작점/끝점과 너무 가까운 중간점은 제외
-                    if (Vector3.Distance(edgePoint, startPos) > tolerance &&
-                        Vector3.Distance(edgePoint, endPos) > tolerance)
-                    {
-                        points.Add(edgePoint);
-                    }
-                }
-
-                // 끝점과 가까운 지점에서 수집 종료
-                if (collecting && Vector3.Distance(edgePoint, endPos) <= tolerance)
-                {
-                    points.Add(endPos); // 정확한 끝점 추가
-                    break;
-                }
-            }
-
-            return points;
-        }
-
-        /// <summary>
-        /// 점에 가장 가까운 엣지 라인을 반환합니다
-        /// </summary>
-        private List<Vector3> GetClosestEdgeToPoint(RoadComponent road, Vector3 point)
-        {
-            float distToLeft = GetDistanceToEdgeLine(road.LeftEdgeLine, point);
-            float distToRight = GetDistanceToEdgeLine(road.RightEdgeLine, point);
-
-            if (distToLeft <= distToRight)
-                return road.LeftEdgeLine;
-            else
-                return road.RightEdgeLine;
-        }
-
-        /// <summary>
-        /// 점과 엣지 라인 사이의 최단 거리를 계산합니다
-        /// </summary>
-        private float GetDistanceToEdgeLine(List<Vector3> edgeLine, Vector3 point)
-        {
-            if (edgeLine == null || edgeLine.Count == 0)
-                return float.MaxValue;
-
-            float minDistance = float.MaxValue;
-            foreach (var edgePoint in edgeLine)
-            {
-                float distance = Vector3.Distance(point, edgePoint);
-                if (distance < minDistance)
-                    minDistance = distance;
-            }
-            return minDistance;
-        }
-
-        /// <summary>
-        /// 두 도로 사이의 연결 경로를 찾습니다
-        /// </summary>
-        private List<Vector3> FindConnectionPath(RoadComponent startRoad, RoadComponent endRoad, Vector3 startPos, Vector3 endPos)
-        {
-            List<Vector3> path = new List<Vector3> { startPos };
-
-            // 간단한 구현: 직선 연결
-            // 향후 복잡한 경로 탐색 알고리즘으로 확장 가능
-            Vector3 midPoint = (startPos + endPos) * 0.5f;
-            path.Add(midPoint);
-            path.Add(endPos);
-
-            return path;
-        }
-
-        /// <summary>
-        /// 현재 mesh에 인접한(닿아있는) mesh들을 해당 mesh의 모든 vertex에서 작은 OverlapSphere를 사용해 탐색
-        /// 각 vertex 위치에서 작은 구체로 인접한 mesh들을 감지
-        /// </summary>
-        private List<Collider> FindAdjacentMeshes(Collider currentMesh, Vector3 snapPoint)
-        {
-            List<Collider> adjacentMeshes = new List<Collider>();
-            const float vertexOverlapSphereRadius = 0.1f;
-
-            // 현재 mesh의 모든 vertex 위치 가져오기
-            Vector3[] worldVertices = GetMeshWorldVertices(currentMesh);
-
-            if (worldVertices == null || worldVertices.Length == 0)
-            {
-                Debug.LogWarning($"[FindAdjacentMeshes] No vertices found for mesh: {currentMesh.gameObject.name}");
-                return adjacentMeshes;
-            }
-
-            // 각 vertex에서 작은 OverlapSphere 생성하여 인접 mesh 탐색
-            for (int i = 0; i < worldVertices.Length; i++)
-            {
-                Vector3 vertexPos = worldVertices[i];
-
-                Collider[] foundColliders = Physics.OverlapSphere(
-                    vertexPos,
-                    vertexOverlapSphereRadius,
-                    snapLayerMask
-                );
-
-                foreach (var collider in foundColliders)
-                {
-                    // 현재 mesh가 아니고, 아직 발견되지 않은 mesh라면 추가
-                    if (collider != currentMesh && !adjacentMeshes.Contains(collider))
-                    {
-                        adjacentMeshes.Add(collider);
-                    }
-                }
-            }
-
-            return adjacentMeshes;
-        }
-
-        /// <summary>
-        /// Mesh의 모든 vertex를 월드 좌표로 변환하여 반환
-        /// </summary>
-        private Vector3[] GetMeshWorldVertices(Collider meshCollider)
-        {
-            MeshFilter meshFilter = meshCollider.GetComponent<MeshFilter>();
-            if (meshFilter == null || meshFilter.mesh == null)
-                return null;
-
-            Mesh mesh = meshFilter.mesh;
-            Transform meshTransform = meshCollider.transform;
-            Vector3[] vertices = mesh.vertices;
-
-            if (vertices.Length == 0)
-                return null;
-
-            // 로컬 좌표를 월드 좌표로 변환
-            Vector3[] worldVertices = new Vector3[vertices.Length];
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                worldVertices[i] = meshTransform.TransformPoint(vertices[i]);
-            }
-
-            return worldVertices;
-        }
-
-        /// <summary>
-        /// Collider에서 RoadComponent를 찾습니다. 없으면 parent hierarchy에서 검색합니다.
-        /// </summary>
-        private RoadComponent FindRoadComponent(Collider collider)
-        {
-            if (collider == null) return null;
-
-            // 1. 해당 GameObject에서 먼저 찾기
-            RoadComponent roadComponent = collider.GetComponent<RoadComponent>();
-            if (roadComponent != null) return roadComponent;
-
-            // 2. Parent hierarchy에서 찾기
-            Transform current = collider.transform.parent;
-            while (current != null)
-            {
-                roadComponent = current.GetComponent<RoadComponent>();
-                if (roadComponent != null)
-                {
-                    Debug.Log($"Found RoadComponent on parent: {current.name}");
-                    return roadComponent;
-                }
-                current = current.parent;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// 주어진 점이 RoadComponent의 어느 edgeLine에 더 가까운지 판단합니다.
-        /// </summary>
-        private List<Vector3> GetClosestEdgeLine(RoadComponent roadComponent, Vector3 worldPoint)
-        {
-            if (roadComponent == null) return null;
-
-            float distanceToLeft = GetMinDistanceToEdgeLine(roadComponent, roadComponent.LeftEdgeLine, worldPoint);
-            float distanceToRight = GetMinDistanceToEdgeLine(roadComponent, roadComponent.RightEdgeLine, worldPoint);
-
-            // 더 가까운 edgeLine 반환
-            return distanceToLeft <= distanceToRight ? roadComponent.LeftEdgeLine : roadComponent.RightEdgeLine;
-        }
-
-        /// <summary>
-        /// 점과 edgeLine 사이의 최단 거리를 계산합니다.
-        /// </summary>
-        private float GetMinDistanceToEdgeLine(RoadComponent roadComponent, List<Vector3> edgeLine, Vector3 worldPoint)
-        {
-            if (edgeLine == null || edgeLine.Count == 0) return float.MaxValue;
-
-            float minDistance = float.MaxValue;
-            foreach (var localPoint in edgeLine)
-            {
-                Vector3 worldEdgePoint = roadComponent.transform.TransformPoint(localPoint);
-                float distance = Vector3.Distance(worldPoint, worldEdgePoint);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                }
-            }
-
-            return minDistance;
-        }
-
-        /// <summary>
-        /// vertex가 시작점과 도착점 사이에 위치하는지 정확히 판단
-        /// </summary>
-        private bool IsVertexBetweenStartAndEnd(Vector3 startPos, Vector3 endPos, Vector3 vertex)
-        {
-            // 시작점-도착점 선분의 방향 벡터
-            Vector3 lineDirection = (endPos - startPos);
-            float lineLength = lineDirection.magnitude;
-            lineDirection = lineDirection.normalized;
-
-            // 시작점에서 vertex로의 벡터
-            Vector3 startToVertex = vertex - startPos;
-
-            // vertex를 시작점-도착점 직선에 투영
-            float projectionLength = Vector3.Dot(startToVertex, lineDirection);
-
-            // 투영된 길이가 0~lineLength 범위 내에 있으면 "사이"에 위치
-            return projectionLength >= 0f && projectionLength <= lineLength;
-        }
-
-
-
-
-
         #endregion
     }
 }
