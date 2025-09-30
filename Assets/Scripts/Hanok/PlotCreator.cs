@@ -89,6 +89,11 @@ namespace Hanok
         private const float DEFAULT_LINE_WIDTH = 0.4f;
         private const float SHARP_ANGLE_THRESHOLD = 50f;
 
+        // Fill Mesh Constants
+        private const float FILL_CURVE_DETAIL = 1.0f; // 곡선 세부 정도 (미터당 점 개수)
+        private const int MAX_POLYGON_COUNT = 100; // 최대 폴리곤 수
+        private const float MIN_SEGMENT_LENGTH = 0.5f; // 최소 세그먼트 길이
+
         // Static collections for memory optimization
         private static readonly List<Vector3> EmptyVectorList = new List<Vector3>();
         private static readonly List<bool> EmptyBoolList = new List<bool>();
@@ -128,6 +133,10 @@ namespace Hanok
 
         // Internal curve exploration state
         private Dictionary<int, List<Vector3>> edgeCurvePaths = new Dictionary<int, List<Vector3>>(); // 각 변의 곡선 경로
+
+        // PlotDivider-ready architecture
+        private List<Vector3> cachedBoundaryVertices = new List<Vector3>(); // 캐시된 경계선
+        private bool boundaryDirty = true; // 경계선 갱신 필요 여부
         #endregion        
 
         #region Unity Lifecycle
@@ -243,6 +252,9 @@ namespace Hanok
 
             PlotVertices.Add(SnapToRoadVertex(position));
 
+            // 경계선 캐시 무효화
+            InvalidateBoundaryCache();
+
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
             UpdateDebugInfo();
 
@@ -320,6 +332,9 @@ namespace Hanok
 
             PlotVertices[index] = plotVertex;
 
+            // 경계선 캐시 무효화
+            InvalidateBoundaryCache();
+
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
             UpdateDebugInfo();
 
@@ -331,6 +346,9 @@ namespace Hanok
             if (PlotVertices == null || PlotVertices.Count == 0) return;
 
             PlotVertices.RemoveAt(PlotVertices.Count - 1);
+
+            // 경계선 캐시 무효화
+            InvalidateBoundaryCache();
 
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
             UpdateDebugInfo();
@@ -347,6 +365,9 @@ namespace Hanok
 
             // 곡선 경로 정보도 정리
             edgeCurvePaths.Clear();
+
+            // 경계선 캐시 무효화
+            InvalidateBoundaryCache();
 
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
             UpdateDebugInfo();
@@ -617,39 +638,287 @@ namespace Hanok
             // 색상 업데이트
             meshRenderer.material.color = FillColor;
 
-            // 메시 생성
-            Mesh mesh = new Mesh();
+            // 곡선을 고려한 경계선 생성
+            List<Vector3> boundaryVertices = GenerateOptimizedBoundaryVertices();
 
-            // 폴리곤 triangulation (간단한 fan triangulation)
-            Vector3[] vertices = new Vector3[PlotVertices.Count];
-            Vector2[] uvs = new Vector2[PlotVertices.Count];
-            int[] triangles = new int[(PlotVertices.Count - 2) * 3];
-
-            // 정점과 UV 설정
-            for (int i = 0; i < PlotVertices.Count; i++)
+            if (boundaryVertices.Count < 3)
             {
-                vertices[i] = PlotVertices[i].snappedPositions[0];
-                uvs[i] = new Vector2(vertices[i].x, vertices[i].z);
+                ClearFillMesh();
+                return;
             }
 
-            // Fan triangulation으로 삼각형 생성
+            // 메시 생성
+            Mesh mesh = CreateTriangulatedMesh(boundaryVertices);
+
+            meshFilter.mesh = mesh;
+            PlotMesh = mesh;
+        }
+
+        /// <summary>
+        /// 곡선을 고려하여 최적화된 경계선 정점들을 생성합니다
+        /// </summary>
+        private List<Vector3> GenerateOptimizedBoundaryVertices()
+        {
+            // 캐시 확인
+            if (!boundaryDirty && cachedBoundaryVertices.Count > 0)
+            {
+                return new List<Vector3>(cachedBoundaryVertices);
+            }
+
+            List<Vector3> boundaryVertices = new List<Vector3>();
+
+            for (int i = 0; i < PlotVertices.Count; i++)
+            {
+                int nextIndex = (i + 1) % PlotVertices.Count;
+
+                // 현재 정점 추가
+                Vector3 currentVertex = PlotVertices[i].snappedPositions[0];
+                boundaryVertices.Add(currentVertex);
+
+                // 해당 변에 곡선 경로가 있는지 확인
+                if (edgeCurvePaths.ContainsKey(i) && edgeCurvePaths[i].Count > 2)
+                {
+                    // 곡선 경로를 적응적 샘플링으로 최적화
+                    List<Vector3> optimizedCurve = OptimizeCurveForFillMesh(edgeCurvePaths[i]);
+
+                    // 시작점과 끝점 제외하고 중간 점들만 추가
+                    for (int j = 1; j < optimizedCurve.Count - 1; j++)
+                    {
+                        boundaryVertices.Add(optimizedCurve[j]);
+                    }
+                }
+            }
+
+            // 캐시 업데이트
+            cachedBoundaryVertices = new List<Vector3>(boundaryVertices);
+            boundaryDirty = false;
+
+            return boundaryVertices;
+        }
+
+        /// <summary>
+        /// PlotDivider에서 사용할 수 있는 경계선 정점들을 반환합니다
+        /// </summary>
+        public List<Vector3> GetBoundaryVerticesForDivider()
+        {
+            return GenerateOptimizedBoundaryVertices();
+        }
+
+        /// <summary>
+        /// PlotDivider에서 사용할 수 있는 Plot의 UV 경계를 반환합니다
+        /// </summary>
+        public Bounds GetPlotBounds()
+        {
+            var boundaryVertices = GetBoundaryVerticesForDivider();
+            if (boundaryVertices.Count == 0) return new Bounds();
+
+            return CalculateBounds(boundaryVertices.ToArray());
+        }
+
+        /// <summary>
+        /// 경계선이 변경되었음을 알립니다 (PlotDivider 등에서 호출)
+        /// </summary>
+        public void InvalidateBoundaryCache()
+        {
+            boundaryDirty = true;
+        }
+
+        /// <summary>
+        /// 곡선을 Fill Mesh용으로 최적화합니다 (적응적 샘플링)
+        /// </summary>
+        private List<Vector3> OptimizeCurveForFillMesh(List<Vector3> originalCurve)
+        {
+            if (originalCurve == null || originalCurve.Count <= 2)
+                return originalCurve ?? EmptyVectorList;
+
+            List<Vector3> optimized = new List<Vector3>();
+            optimized.Add(originalCurve[0]); // 시작점
+
+            float accumulatedDistance = 0f;
+            Vector3 lastAddedPoint = originalCurve[0];
+
+            for (int i = 1; i < originalCurve.Count - 1; i++)
+            {
+                Vector3 currentPoint = originalCurve[i];
+                float distanceFromLast = Vector3.Distance(lastAddedPoint, currentPoint);
+                accumulatedDistance += distanceFromLast;
+
+                // 적응적 샘플링: 거리 기반 + 각도 변화 기반
+                bool shouldAdd = false;
+
+                // 1. 최소 거리 조건
+                if (accumulatedDistance >= MIN_SEGMENT_LENGTH)
+                {
+                    shouldAdd = true;
+                }
+
+                // 2. 각도 변화가 큰 경우 (곡률이 높은 부분)
+                if (i > 0 && i < originalCurve.Count - 1)
+                {
+                    Vector3 prevPoint = originalCurve[i - 1];
+                    Vector3 nextPoint = originalCurve[i + 1];
+                    float angle = VectorAngleUtils.GetAngleAtPointDegrees(prevPoint, currentPoint, nextPoint);
+
+                    if (angle > 30f) // 30도 이상 꺾이는 지점
+                    {
+                        shouldAdd = true;
+                    }
+                }
+
+                if (shouldAdd)
+                {
+                    optimized.Add(currentPoint);
+                    lastAddedPoint = currentPoint;
+                    accumulatedDistance = 0f;
+                }
+            }
+
+            optimized.Add(originalCurve[originalCurve.Count - 1]); // 끝점
+            return optimized;
+        }
+
+        /// <summary>
+        /// 경계선 정점들로부터 삼각분할된 메시를 생성합니다
+        /// </summary>
+        private Mesh CreateTriangulatedMesh(List<Vector3> boundaryVertices)
+        {
+            Mesh mesh = new Mesh();
+
+            // 폴리곤 수 제한 확인
+            int estimatedTriangles = (boundaryVertices.Count - 2);
+            if (estimatedTriangles > MAX_POLYGON_COUNT)
+            {
+                // 폴리곤 수가 너무 많은 경우 추가 간소화
+                boundaryVertices = SimplifyBoundaryVertices(boundaryVertices, MAX_POLYGON_COUNT + 2);
+            }
+
+            Vector3[] vertices = boundaryVertices.ToArray();
+            Vector2[] uvs = new Vector2[vertices.Length];
+            int[] triangles = new int[(vertices.Length - 2) * 3];
+
+            // UV 좌표 계산 (PlotDivider 고려)
+            Bounds bounds = CalculateBounds(vertices);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                // 정규화된 UV (0-1 범위)
+                uvs[i] = new Vector2(
+                    (vertices[i].x - bounds.min.x) / bounds.size.x,
+                    (vertices[i].z - bounds.min.z) / bounds.size.z
+                );
+            }
+
+            // Ear Clipping 삼각분할 (convex한 경우 Fan triangulation)
+            if (IsConvexPolygon(vertices))
+            {
+                // 간단한 Fan triangulation
+                CreateFanTriangulation(triangles);
+            }
+            else
+            {
+                // 복잡한 폴리곤의 경우 Ear Clipping (추후 구현)
+                CreateFanTriangulation(triangles); // 임시로 Fan 사용
+            }
+
+            mesh.vertices = vertices;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+
+            return mesh;
+        }
+
+        /// <summary>
+        /// 경계선 정점 수를 제한된 개수로 간소화합니다
+        /// </summary>
+        private List<Vector3> SimplifyBoundaryVertices(List<Vector3> vertices, int maxCount)
+        {
+            if (vertices.Count <= maxCount) return vertices;
+
+            List<Vector3> simplified = new List<Vector3>();
+            float step = (float)(vertices.Count - 1) / (maxCount - 1);
+
+            for (int i = 0; i < maxCount - 1; i++)
+            {
+                int index = Mathf.RoundToInt(i * step);
+                simplified.Add(vertices[index]);
+            }
+            simplified.Add(vertices[vertices.Count - 1]); // 마지막 점 보장
+
+            return simplified;
+        }
+
+        /// <summary>
+        /// 정점들의 경계 상자를 계산합니다
+        /// </summary>
+        private Bounds CalculateBounds(Vector3[] vertices)
+        {
+            if (vertices.Length == 0) return new Bounds();
+
+            Vector3 min = vertices[0];
+            Vector3 max = vertices[0];
+
+            foreach (var vertex in vertices)
+            {
+                min = Vector3.Min(min, vertex);
+                max = Vector3.Max(max, vertex);
+            }
+
+            return new Bounds((min + max) * 0.5f, max - min);
+        }
+
+        /// <summary>
+        /// 폴리곤이 convex한지 확인합니다
+        /// </summary>
+        private bool IsConvexPolygon(Vector3[] vertices)
+        {
+            if (vertices.Length < 3) return false;
+
+            bool isConvex = true;
+            bool signSet = false;
+            bool currentSign = false;
+
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 p1 = vertices[i];
+                Vector3 p2 = vertices[(i + 1) % vertices.Length];
+                Vector3 p3 = vertices[(i + 2) % vertices.Length];
+
+                Vector3 v1 = p2 - p1;
+                Vector3 v2 = p3 - p2;
+                float cross = v1.x * v2.z - v1.z * v2.x; // 2D cross product
+
+                if (Mathf.Abs(cross) > 0.001f) // 직선이 아닌 경우만
+                {
+                    bool sign = cross > 0;
+                    if (!signSet)
+                    {
+                        currentSign = sign;
+                        signSet = true;
+                    }
+                    else if (sign != currentSign)
+                    {
+                        isConvex = false;
+                        break;
+                    }
+                }
+            }
+
+            return isConvex;
+        }
+
+        /// <summary>
+        /// Fan triangulation을 생성합니다
+        /// </summary>
+        private void CreateFanTriangulation(int[] triangles)
+        {
             int triangleIndex = 0;
-            for (int i = 1; i < PlotVertices.Count - 1; i++)
+            for (int i = 1; i < (triangles.Length / 3) + 1; i++)
             {
                 triangles[triangleIndex] = 0;
                 triangles[triangleIndex + 1] = i;
                 triangles[triangleIndex + 2] = i + 1;
                 triangleIndex += 3;
             }
-
-            // 메시 설정
-            mesh.vertices = vertices;
-            mesh.uv = uvs;
-            mesh.triangles = triangles;
-            mesh.RecalculateNormals();
-
-            meshFilter.mesh = mesh;
-            PlotMesh = mesh;
         }
 
         private void ClearFillMesh()
@@ -765,7 +1034,7 @@ namespace Hanok
                 // 급커브가 발견되면 직선으로 처리 (빈 리스트 반환)
                 if (sharpCurveCount > 0)
                 {
-                    Debug.Log($"[Curve Analysis] {sharpCurveCount} Sharp curves detected, from ({startVertexIndex}->{endVertexIndex})");
+                    // Debug.Log($"[Curve Analysis] {sharpCurveCount} Sharp curves detected, from ({startVertexIndex}->{endVertexIndex})");
                     return EmptyVectorList;
                 }
             }
