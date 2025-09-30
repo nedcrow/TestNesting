@@ -92,11 +92,8 @@ public class RoadBuilder : MonoBehaviour
     private bool _wasAltPressed;
     private Vector3 _bezierReferencePoint;
 
-    [Header("Debug - Snap Status")]
-    [SerializeField] private bool _startSnapped;
-    [SerializeField] private bool _endSnapped;
-    [SerializeField] private Vector3 _startSnapTangent;
-    [SerializeField] private bool _startSnapIsEndpoint;
+    private bool _startSnapped;
+    private bool _endSnapped;
 
     private readonly List<RoadComponent> _roads = new();
     private readonly List<RoadChunkRef> _chunks = new();
@@ -313,18 +310,7 @@ public class RoadBuilder : MonoBehaviour
     private void SetStartAnchor(Vector3 position)
     {
         _startSnapped = TryFindSnap(position, out var sPoint, out var sTan, out var sIsEnd);
-        if (_startSnapped)
-        {
-            _startAnchor = sPoint;
-            _startSnapTangent = sTan;
-            _startSnapIsEndpoint = sIsEnd;
-        }
-        else
-        {
-            _startAnchor = position;
-            _startSnapTangent = Vector3.zero;
-            _startSnapIsEndpoint = false;
-        }
+        _startAnchor = _startSnapped ? sPoint : position;
     }
 
     private List<Vector3> CreateCenterline(Vector3 start, Vector3 end, out bool endSnapped)
