@@ -149,19 +149,34 @@ namespace Hanok
                 return;
             }
 
-            // 첫 번째 변(edge)만 사용하여 마커 계산 (기존 로직 유지)
+            // 첫 번째 변(line 1) 분할 가능 수량 계산
             List<Vector3> firstEdgeVertices = new List<Vector3> { plot.GetVertexPosition(0), plot.GetVertexPosition(1) };
-            var (unitCount, unitLen, totalLen) = CalculateOptimalEdgeMarkers(firstEdgeVertices, minUnitLength, maxUnitLength);
-            if (unitCount <= 1)
+            var (firstUnitCount, firstUnitLen, firstTotalLen) = CalculateOptimalEdgeMarkers(firstEdgeVertices, minUnitLength, maxUnitLength);
+
+            int finalUnitCount = firstUnitCount;
+
+            // 4개 정점이 있는 경우 세 번째 변(line 3)도 확인
+            if (plot.PlotVertices.Count >= 4)
+            {
+                List<Vector3> thirdEdgeVertices = new List<Vector3> { plot.GetVertexPosition(2), plot.GetVertexPosition(3) };
+                var (thirdUnitCount, thirdUnitLen, thirdTotalLen) = CalculateOptimalEdgeMarkers(thirdEdgeVertices, minUnitLength, maxUnitLength);
+
+                // 두 변 중 분할 가능 수량이 적은 쪽 선택
+                finalUnitCount = Mathf.Min(firstUnitCount, thirdUnitCount);
+
+                Debug.Log($"[PlotDivider] Line 1 unit count: {firstUnitCount}, Line 3 unit count: {thirdUnitCount}, Final unit count: {finalUnitCount}");
+            }
+
+            if (finalUnitCount <= 1)
             {
                 Clear();
                 return;
             }
 
-            CreateOrUpdateEdgeMarkers(firstEdgeVertices, unitCount);
+            CreateOrUpdateEdgeMarkers(firstEdgeVertices, finalUnitCount);
 
             if (plot.PlotVertices.Count == 4)
-                ShowSemiPlotPreview(plot, unitCount, parent);
+                ShowSemiPlotPreview(plot, finalUnitCount, parent);
         }
 
         public void ClearEdgeMarkersPreview()
