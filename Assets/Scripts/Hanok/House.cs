@@ -14,13 +14,13 @@ namespace Hanok
     public class House : MonoBehaviour
     {
         [SerializeField] private List<BuildingType> requiredBuildingTypes;
-        [SerializeField] private Vector3[] outlineVertices = new Vector3[4];
+        [SerializeField] private List<List<Vector3>> outlineVertices;
         [SerializeField] private float minimumLength = 5f;
         [SerializeField] private float maximumLength = 15f;
         [SerializeField] private List<Building> containedBuildings;
         
         public List<BuildingType> RequiredBuildingTypes => requiredBuildingTypes;
-        public Vector3[] OutlineVertices => outlineVertices;
+        public List<List<Vector3>> OutlineVertices => outlineVertices;
         public float MinimumLength => minimumLength;
         public float MaximumLength => maximumLength;
         public List<Building> ContainedBuildings => containedBuildings;
