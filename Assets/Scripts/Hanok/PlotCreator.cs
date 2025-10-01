@@ -2,83 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UtilLibrary;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Hanok
 {
-    #region PlotVertex Structure
-
-    /// <summary>
-    /// 스냅된 점의 라인 타입
-    /// </summary>
-    [System.Serializable]
-    public enum SnapLineType
-    {
-        LeftEdge,
-        RightEdge
-    }
-
-    /// <summary>
-    /// 개별 스냅 정보
-    /// </summary>
-    [System.Serializable]
-    public struct SnapInfo
-    {
-        public Vector3 snappedPosition;
-        public RoadComponent snappedRoad;
-        public SnapLineType snappedLine;
-
-        public SnapInfo(Vector3 position, RoadComponent road, SnapLineType lineType)
-        {
-            snappedPosition = position;
-            snappedRoad = road;
-            snappedLine = lineType;
-        }
-    }
-
-    /// <summary>
-    /// Plot vertex information containing position, snap status, and detailed snap information
-    /// </summary>
-    [System.Serializable]
-    public struct PlotVertex
-    {
-        [SerializeField] public bool isSnapped;
-        [SerializeField] public List<SnapInfo> snapInfos;
-
-        public PlotVertex(bool snapped = false, List<SnapInfo> infos = null)
-        {
-            isSnapped = snapped;
-            snapInfos = infos ?? new List<SnapInfo>();
-        }
-
-        public Vector3 GetPositionForCurve(RoadComponent targetRoad)
-        {
-            if (snapInfos == null || snapInfos.Count == 0) return Vector3.zero;
-
-            var targetInfo = snapInfos.FirstOrDefault(info => info.snappedRoad == targetRoad);
-            return targetInfo.snappedRoad != null ? targetInfo.snappedPosition :
-                   snapInfos.FirstOrDefault().snappedPosition;
-        }
-
-        public SnapInfo GetSnapInfoForRoad(RoadComponent targetRoad)
-        {
-            if (snapInfos == null || targetRoad == null) return default(SnapInfo);
-
-            return snapInfos.FirstOrDefault(info => info.snappedRoad == targetRoad);
-        }
-
-        public List<Vector3> GetAllPositions() => snapInfos?.Select(info => info.snappedPosition).ToList() ?? new List<Vector3>();
-
-        public List<RoadComponent> GetAllRoads() => snapInfos?.Select(info => info.snappedRoad).ToList() ?? new List<RoadComponent>();
-
-        // 호환성을 위한 프로퍼티
-        public List<Vector3> snappedPositions => GetAllPositions();
-        public List<RoadComponent> snappedRoads => GetAllRoads();
-    }
-    #endregion
-
     public class PlotCreator : MonoBehaviour
     {
         #region Configuration & Properties
@@ -90,7 +16,6 @@ namespace Hanok
         private const float SHARP_ANGLE_THRESHOLD = 50f;
 
         // Fill Mesh Constants
-        private const float FILL_CURVE_DETAIL = 1.0f; // 곡선 세부 정도 (미터당 점 개수)
         private const int MAX_POLYGON_COUNT = 100; // 최대 폴리곤 수
         private const float MIN_SEGMENT_LENGTH = 0.5f; // 최소 세그먼트 길이
 
@@ -112,17 +37,14 @@ namespace Hanok
         [SerializeField] private bool enableAutoCurveExploration = true;
 
         // Core Properties
-        public List<PlotVertex> PlotVertices { get; private set; }
-        public Mesh PlotMesh { get; private set; }
+        public Plot CurrentPlot { get; private set; }
 
         // Convenience Properties
-        public List<Vector3> VertexPositions => GetVertexPositions();
-        public List<bool> VertexSnapStates => PlotVertices?.Select(v => v.isSnapped).ToList() ?? EmptyBoolList;
+        public List<Vector3> VertexPositions => CurrentPlot?.GetVertexPositions() ?? EmptyVectorList;
+        public List<bool> VertexSnapStates => CurrentPlot?.VertexSnapStates ?? EmptyBoolList;
         public Color LineColor { get; set; } = Color.white;
         public Color FillColor { get; set; } = new Color(1f, 1f, 1f, 0.3f);
 
-        [Header("Debug Info")]
-        [SerializeField] private List<PlotVertex> debugPlotVertices = new List<PlotVertex>();
         #endregion
 
         #region Private Fields
@@ -149,7 +71,13 @@ namespace Hanok
         #region Init
         public void InitializePlot()
         {
-            PlotVertices = new List<PlotVertex>();
+            // Create Plot component if it doesn't exist
+            CurrentPlot = GetComponent<Plot>();
+            if (CurrentPlot == null)
+            {
+                CurrentPlot = gameObject.AddComponent<Plot>();
+            }
+            CurrentPlot.InitializePlot();
 
             InitializeMaterials();
             InitializeRenderers();
@@ -248,15 +176,15 @@ namespace Hanok
         #region Vertex Management & Data Access
         public void AddVertex(Vector3 position)
         {
-            if (PlotVertices == null || PlotVertices.Count >= MaxCountOfVertex) return;
+            if (CurrentPlot?.PlotVertices == null || CurrentPlot.PlotVertices.Count >= MaxCountOfVertex) return;
 
-            PlotVertices.Add(SnapToRoadVertex(position));
+            CurrentPlot.AddVertex(SnapToRoadVertex(position));
 
             // 경계선 캐시 무효화
             InvalidateBoundaryCache();
 
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
-            UpdateDebugInfo();
+            CurrentPlot?.UpdateDebugInfo();
 
             UpdatePlotVisualization();
         }
@@ -268,23 +196,23 @@ namespace Hanok
         /// <param name="index">-1이면 마지막 인덱스</param>
         public void UpdateVertexPosition(Vector3 position, int index = -1)
         {
-            if (PlotVertices == null || PlotVertices.Count == 0) return;
+            if (CurrentPlot?.PlotVertices == null || CurrentPlot.PlotVertices.Count == 0) return;
 
-            if (index == -1) index = PlotVertices.Count - 1;
+            if (index == -1) index = CurrentPlot.PlotVertices.Count - 1;
 
-            if (index < 0 || index >= PlotVertices.Count) return;
+            if (index < 0 || index >= CurrentPlot.PlotVertices.Count) return;
 
             PlotVertex plotVertex;
 
             plotVertex = SnapToRoadVertex(position);
-            if (enableAutoCurveExploration && PlotVertices.Count >= 2 && PlotVertices != null)
+            if (enableAutoCurveExploration && CurrentPlot.PlotVertices.Count >= 2 && CurrentPlot.PlotVertices != null)
             {
                 // 마지막 두 vertex 확인
-                int lastIndex = PlotVertices.Count - 1;
+                int lastIndex = CurrentPlot.PlotVertices.Count - 1;
                 int secondLastIndex = lastIndex - 1;
 
                 // 연속된 두 점이 모두 snap된 경우에만 exploration 실행
-                if (PlotVertices[secondLastIndex].isSnapped && PlotVertices[lastIndex].isSnapped)
+                if (CurrentPlot.PlotVertices[secondLastIndex].isSnapped && CurrentPlot.PlotVertices[lastIndex].isSnapped)
                 {
 
                     List<Vector3> edgeCurvePath = ExploreCurveVertices(secondLastIndex, lastIndex);
@@ -307,7 +235,7 @@ namespace Hanok
                 }
 
                 // 미리보기 중: 마지막 점과 첫 번째 점 사이의 곡선도 확인 (폐곡선 완성을 위해)
-                if (PlotVertices.Count >= 4 && PlotVertices[0].isSnapped && PlotVertices[lastIndex].isSnapped)
+                if (CurrentPlot.PlotVertices.Count >= 4 && CurrentPlot.PlotVertices[0].isSnapped && CurrentPlot.PlotVertices[lastIndex].isSnapped)
                 {
 
                     List<Vector3> edgeCurvePath = ExploreCurveVertices(lastIndex, 0);
@@ -330,37 +258,37 @@ namespace Hanok
                 }
             }
 
-            PlotVertices[index] = plotVertex;
+            CurrentPlot.UpdateVertexAt(index, plotVertex);
 
             // 경계선 캐시 무효화
             InvalidateBoundaryCache();
 
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
-            UpdateDebugInfo();
+            CurrentPlot?.UpdateDebugInfo();
 
             UpdatePlotVisualization();
         }
 
         public void RemoveLastVertex()
         {
-            if (PlotVertices == null || PlotVertices.Count == 0) return;
+            if (CurrentPlot?.PlotVertices == null || CurrentPlot.PlotVertices.Count == 0) return;
 
-            PlotVertices.RemoveAt(PlotVertices.Count - 1);
+            CurrentPlot.RemoveLastVertex();
 
             // 경계선 캐시 무효화
             InvalidateBoundaryCache();
 
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
-            UpdateDebugInfo();
+            CurrentPlot?.UpdateDebugInfo();
 
             UpdatePlotVisualization();
         }
 
         public void ClearPlot()
         {
-            if (PlotVertices != null)
+            if (CurrentPlot?.PlotVertices != null)
             {
-                PlotVertices.Clear();
+                CurrentPlot.ClearVertices();
             }
 
             // 곡선 경로 정보도 정리
@@ -370,62 +298,9 @@ namespace Hanok
             InvalidateBoundaryCache();
 
             // Debug: PlotVertex 정보 업데이트 (Inspector용)
-            UpdateDebugInfo();
+            CurrentPlot?.UpdateDebugInfo();
 
             UpdatePlotVisualization();
-        }
-
-        /// <summary>
-        /// PlotVertices에서 위치값만 추출하여 반환
-        /// </summary>
-        public List<Vector3> GetVertexPositions()
-        {
-            if (PlotVertices == null || PlotVertices.Count == 0)
-                return EmptyVectorList;
-
-            List<Vector3> positions = new List<Vector3>(PlotVertices.Count);
-            for (int i = 0; i < PlotVertices.Count; i++)
-            {
-                positions.Add(PlotVertices[i].snappedPositions[0]);
-            }
-            return positions;
-        }
-
-        /// <summary>
-        /// 특정 인덱스의 vertex 위치 반환
-        /// </summary>
-        public Vector3 GetVertexPosition(int index)
-        {
-            if (PlotVertices == null || index < 0 || index >= PlotVertices.Count)
-                return Vector3.zero;
-
-            return PlotVertices[index].snappedPositions[0];
-        }
-
-        /// <summary>
-        /// 특정 인덱스의 vertex가 snap되었는지 확인
-        /// </summary>
-        public bool IsVertexSnappedAt(int index)
-        {
-            if (PlotVertices == null || index < 0 || index >= PlotVertices.Count)
-                return false;
-
-            return PlotVertices[index].isSnapped;
-        }
-
-        /// <summary>
-        /// Inspector 디버깅을 위한 PlotVertex 정보 업데이트
-        /// </summary>
-        private void UpdateDebugInfo()
-        {
-            if (PlotVertices != null)
-            {
-                debugPlotVertices = new List<PlotVertex>(PlotVertices);
-            }
-            else
-            {
-                debugPlotVertices.Clear();
-            }
         }
 
         #endregion
@@ -489,9 +364,9 @@ namespace Hanok
 
                 // 이전 점이 같은 roadComponent의 다른 edge에 있으면 필터링
                 bool shouldFilter = false;
-                if (PlotVertices.Count > 0)
+                if (CurrentPlot.PlotVertices.Count > 0)
                 {
-                    var prevVertex = PlotVertices[PlotVertices.Count - 1];
+                    var prevVertex = CurrentPlot.PlotVertices[CurrentPlot.PlotVertices.Count - 1];
                     if (prevVertex.isSnapped && prevVertex.snapInfos.Count > 0)
                     {
                         var prevSnapInfo = prevVertex.snapInfos[0];
@@ -540,9 +415,9 @@ namespace Hanok
         #region Visualization
         private void UpdatePlotVisualization()
         {
-            if (PlotVertices == null) return;
+            if (CurrentPlot?.PlotVertices == null) return;
 
-            int vertexCount = PlotVertices.Count;
+            int vertexCount = CurrentPlot.PlotVertices.Count;
 
             // 라인 렌더링: 2개 이상의 vertex가 있을 때
             if (vertexCount >= 2)
@@ -567,7 +442,7 @@ namespace Hanok
 
         private void UpdateLineMesh()
         {
-            if (PlotVertices == null || PlotVertices.Count < 2 || lineRenderers == null) return;
+            if (CurrentPlot?.PlotVertices == null || CurrentPlot.PlotVertices.Count < 2 || lineRenderers == null) return;
 
             // 모든 LineRenderer 초기화
             for (int i = 0; i < lineRenderers.Length; i++)
@@ -580,20 +455,20 @@ namespace Hanok
             }
 
             // 각 변(edge)에 대해 LineRenderer 설정
-            for (int i = 0; i < PlotVertices.Count; i++)
+            for (int i = 0; i < CurrentPlot.PlotVertices.Count; i++)
             {
                 if (i >= lineRenderers.Length) break;
 
-                int nextIndex = (i + 1) % PlotVertices.Count;
+                int nextIndex = (i + 1) % CurrentPlot.PlotVertices.Count;
 
                 // 마지막 변은 3개 이상의 점이 있을 때만
-                if (i == PlotVertices.Count - 1 && PlotVertices.Count < 3) break;
+                if (i == CurrentPlot.PlotVertices.Count - 1 && CurrentPlot.PlotVertices.Count < 3) break;
 
                 LineRenderer edgeLR = lineRenderers[i];
                 if (edgeLR == null) continue;
 
-                Vector3 startVertex = PlotVertices[i].snappedPositions[0];
-                Vector3 endVertex = PlotVertices[nextIndex].snappedPositions[0];
+                Vector3 startVertex = CurrentPlot.PlotVertices[i].snappedPositions[0];
+                Vector3 endVertex = CurrentPlot.PlotVertices[nextIndex].snappedPositions[0];
 
                 // 해당 변에 곡선 경로가 있는지 확인
                 if (edgeCurvePaths.ContainsKey(i) && edgeCurvePaths[i].Count > 1)
@@ -633,7 +508,7 @@ namespace Hanok
 
         private void UpdateFillMesh()
         {
-            if (PlotVertices == null || PlotVertices.Count < 3 || meshFilter == null || meshRenderer == null) return;
+            if (CurrentPlot?.PlotVertices == null || CurrentPlot.PlotVertices.Count < 3 || meshFilter == null || meshRenderer == null) return;
 
             // 색상 업데이트
             meshRenderer.material.color = FillColor;
@@ -651,7 +526,7 @@ namespace Hanok
             Mesh mesh = CreateTriangulatedMesh(boundaryVertices);
 
             meshFilter.mesh = mesh;
-            PlotMesh = mesh;
+            CurrentPlot.SetPlotMesh(mesh);
         }
 
         /// <summary>
@@ -667,12 +542,12 @@ namespace Hanok
 
             List<Vector3> boundaryVertices = new List<Vector3>();
 
-            for (int i = 0; i < PlotVertices.Count; i++)
+            for (int i = 0; i < CurrentPlot.PlotVertices.Count; i++)
             {
-                int nextIndex = (i + 1) % PlotVertices.Count;
+                int nextIndex = (i + 1) % CurrentPlot.PlotVertices.Count;
 
                 // 현재 정점 추가
-                Vector3 currentVertex = PlotVertices[i].snappedPositions[0];
+                Vector3 currentVertex = CurrentPlot.PlotVertices[i].snappedPositions[0];
                 boundaryVertices.Add(currentVertex);
 
                 // 해당 변에 곡선 경로가 있는지 확인
@@ -693,15 +568,10 @@ namespace Hanok
             cachedBoundaryVertices = new List<Vector3>(boundaryVertices);
             boundaryDirty = false;
 
-            return boundaryVertices;
-        }
+            // Plot의 외곽선 정보도 업데이트
+            CurrentPlot?.UpdateOutlineVertices(boundaryVertices);
 
-        /// <summary>
-        /// PlotDivider에서 사용할 수 있는 경계선 정점들을 반환합니다
-        /// </summary>
-        public List<Vector3> GetBoundaryVerticesForDivider()
-        {
-            return GenerateOptimizedBoundaryVertices();
+            return boundaryVertices;
         }
 
         /// <summary>
@@ -709,7 +579,7 @@ namespace Hanok
         /// </summary>
         public Bounds GetPlotBounds()
         {
-            var boundaryVertices = GetBoundaryVerticesForDivider();
+            var boundaryVertices = GenerateOptimizedBoundaryVertices();
             if (boundaryVertices.Count == 0) return new Bounds();
 
             return CalculateBounds(boundaryVertices.ToArray());
@@ -784,11 +654,10 @@ namespace Hanok
         {
             Mesh mesh = new Mesh();
 
-            // 폴리곤 수 제한 확인
+            // 폴리곤 수가 너무 많은 경우 추가 간소화
             int estimatedTriangles = (boundaryVertices.Count - 2);
             if (estimatedTriangles > MAX_POLYGON_COUNT)
-            {
-                // 폴리곤 수가 너무 많은 경우 추가 간소화
+            {                
                 boundaryVertices = SimplifyBoundaryVertices(boundaryVertices, MAX_POLYGON_COUNT + 2);
             }
 
@@ -807,17 +676,7 @@ namespace Hanok
                 );
             }
 
-            // Ear Clipping 삼각분할 (convex한 경우 Fan triangulation)
-            if (IsConvexPolygon(vertices))
-            {
-                // 간단한 Fan triangulation
-                CreateFanTriangulation(triangles);
-            }
-            else
-            {
-                // 복잡한 폴리곤의 경우 Ear Clipping (추후 구현)
-                CreateFanTriangulation(triangles); // 임시로 Fan 사용
-            }
+            CreateFanTriangulation(triangles);
 
             mesh.vertices = vertices;
             mesh.uv = uvs;
@@ -864,46 +723,6 @@ namespace Hanok
             }
 
             return new Bounds((min + max) * 0.5f, max - min);
-        }
-
-        /// <summary>
-        /// 폴리곤이 convex한지 확인합니다
-        /// </summary>
-        private bool IsConvexPolygon(Vector3[] vertices)
-        {
-            if (vertices.Length < 3) return false;
-
-            bool isConvex = true;
-            bool signSet = false;
-            bool currentSign = false;
-
-            for (int i = 0; i < vertices.Length; i++)
-            {
-                Vector3 p1 = vertices[i];
-                Vector3 p2 = vertices[(i + 1) % vertices.Length];
-                Vector3 p3 = vertices[(i + 2) % vertices.Length];
-
-                Vector3 v1 = p2 - p1;
-                Vector3 v2 = p3 - p2;
-                float cross = v1.x * v2.z - v1.z * v2.x; // 2D cross product
-
-                if (Mathf.Abs(cross) > 0.001f) // 직선이 아닌 경우만
-                {
-                    bool sign = cross > 0;
-                    if (!signSet)
-                    {
-                        currentSign = sign;
-                        signSet = true;
-                    }
-                    else if (sign != currentSign)
-                    {
-                        isConvex = false;
-                        break;
-                    }
-                }
-            }
-
-            return isConvex;
         }
 
         /// <summary>
@@ -997,14 +816,14 @@ namespace Hanok
         public List<Vector3> ExploreCurveVertices(int startVertexIndex, int endVertexIndex)
         {
             // 두 점이 모두 snap된 상태인지 확인
-            if (!PlotVertices[startVertexIndex].isSnapped || !PlotVertices[endVertexIndex].isSnapped)
+            if (!CurrentPlot.PlotVertices[startVertexIndex].isSnapped || !CurrentPlot.PlotVertices[endVertexIndex].isSnapped)
             {
                 return EmptyVectorList;
             }
 
             // 시작점과 끝점 정보 가져오기
-            PlotVertex startVertex = PlotVertices[startVertexIndex];
-            PlotVertex endVertex = PlotVertices[endVertexIndex];
+            PlotVertex startVertex = CurrentPlot.PlotVertices[startVertexIndex];
+            PlotVertex endVertex = CurrentPlot.PlotVertices[endVertexIndex];
 
             if (startVertex.snappedRoads.Count == 0 || endVertex.snappedRoads.Count == 0)
             {
@@ -1017,16 +836,13 @@ namespace Hanok
             List<Vector3> curvePoints;
             if (commonRoad != null)
             {
-                // 같은 도로 내에서 곡선 생성
                 curvePoints = GenerateCurveWithinSameRoad(startVertex, endVertex, commonRoad);
             }
             else
             {
-                // 서로 다른 도로 간 곡선 생성
                 curvePoints = GenerateCurveBetweenDifferentRoads(startVertex, endVertex);
             }
 
-            // 급커브 개수 분석 및 로그 출력
             if (curvePoints.Count > 2)
             {
                 int sharpCurveCount = CountSharpCurves(curvePoints);
