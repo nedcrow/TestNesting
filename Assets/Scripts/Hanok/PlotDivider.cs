@@ -13,7 +13,7 @@ namespace Hanok
         #endregion
 
         #region Private Fields
-        private List<List<Vector3>> currentSemiPlots;
+        private List<Plot> currentSemiPlots;
 
         private const string SemiPlotPrefix = "SemiPlot_";
         private const string MarkerPrefix   = "EdgeMarker_";
@@ -73,7 +73,7 @@ namespace Hanok
             VisualizeSemiPlots(currentSemiPlots);
         }
 
-        public List<List<Vector3>> GetCurrentSemiPlots() => currentSemiPlots;
+        public List<Plot> GetCurrentSemiPlots() => currentSemiPlots;
 
         public void ClearSemiPlotPreview()
         {
@@ -87,7 +87,7 @@ namespace Hanok
             currentSemiPlots = null;
         }
 
-        private void VisualizeSemiPlots(List<List<Vector3>> semiPlots)
+        private void VisualizeSemiPlots(List<Plot> semiPlots)
         {
             InitOnce();
 
@@ -99,7 +99,11 @@ namespace Hanok
                 var go = GetOrCreateChild(_semiPlotsParent, $"{SemiPlotPrefix}{i}");
                 go.SetActive(true);
 
-                var verts = semiPlots[i];
+                // Plot에서 외곽선 정점들 가져오기
+                var semiPlot = semiPlots[i];
+                var verts = semiPlot.GetFlattenedOutlineVertices();
+                if (verts.Count == 0) continue;
+
                 var lr = InitializeSemiPlotLineRenderer(go, verts.Count);
                 for (int j = 0; j < verts.Count; j++) lr.SetPosition(j, verts[j]);
             }
@@ -176,7 +180,7 @@ namespace Hanok
         /// <summary>
         /// Plot 컴포넌트를 사용하여 곡선 외곽선을 고려한 플롯 분할
         /// </summary>
-        public List<List<Vector3>> DividePlot(Plot plot, int count)
+        public List<Plot> DividePlot(Plot plot, int count)
         {
             if (plot?.PlotVertices == null || plot.PlotVertices.Count < 4) return null;
             if (count <= 0) return null;
@@ -190,34 +194,15 @@ namespace Hanok
         }
 
         /// <summary>
-        /// 다중 외곽선 세그먼트를 고려한 고급 플롯 분할 (향후 확장용)
-        /// </summary>
-        public List<List<Vector3>> DividePlotAdvanced(Plot plot, int count)
-        {
-            if (plot?.PlotVertices == null || plot.PlotVertices.Count < 4) return null;
-            if (count <= 0) return null;
-
-            // 다중 외곽선이 있는 경우 복합 경계 처리
-            if (plot.OutlineVertices?.Count > 1)
-            {
-                // 다중 세그먼트 경계 직접 사용
-                return DividePlotWithCurvedBoundary(plot, plot.OutlineVertices, count);
-            }
-
-            // 단일 세그먼트인 경우 기본 분할 사용
-            return DividePlot(plot, count);
-        }
-
-        /// <summary>
         /// 곡선 경계를 고려한 플롯 분할 (기존 PlotVertex 정보 활용)
         /// </summary>
-        private List<List<Vector3>> DividePlotWithCurvedBoundary(Plot plot, List<List<Vector3>> boundarySegments, int count)
+        private List<Plot> DividePlotWithCurvedBoundary(Plot plot, List<List<Vector3>> boundarySegments, int count)
         {
             if (plot?.PlotVertices == null || plot.PlotVertices.Count != 4) return null;
             if (boundarySegments == null || boundarySegments.Count == 0) return null;
             if (count <= 0) return null;
 
-            var semiPlots = new List<List<Vector3>>(count);
+            var semiPlots = new List<Plot>(count);
 
             // 기존 PlotVertex 정보를 사용하여 4개 코너점 확보
             Vector3 corner0 = plot.GetVertexPosition(0); // 첫 번째 코너
@@ -348,7 +333,16 @@ namespace Hanok
                     }
                 }
 
-                semiPlots.Add(semiPlotBoundary);
+                // Plot 객체 생성 및 경계선 설정
+                GameObject semiPlotObject = new GameObject($"SemiPlot_{i}");
+                Plot semiPlot = semiPlotObject.AddComponent<Plot>();
+                semiPlot.InitializePlot();
+
+                // 경계선을 OutlineVertices에 단일 세그먼트로 설정
+                var outlineSegments = new List<List<Vector3>> { semiPlotBoundary };
+                semiPlot.UpdateOutlineVertices(outlineSegments);
+
+                semiPlots.Add(semiPlot);
             }
             return semiPlots;
         }
