@@ -333,9 +333,13 @@ namespace Hanok
                     }
                 }
 
-                // Plot 객체 생성 및 경계선 설정
-                GameObject semiPlotObject = new GameObject($"SemiPlot_{i}");
-                Plot semiPlot = semiPlotObject.AddComponent<Plot>();
+                // Plot 객체 생성 및 경계선 설정 (풀링 사용)
+                GameObject semiPlotObject = GetOrCreateSemiPlotGameObject(i);
+                Plot semiPlot = semiPlotObject.GetComponent<Plot>();
+                if (semiPlot == null)
+                {
+                    semiPlot = semiPlotObject.AddComponent<Plot>();
+                }
                 semiPlot.InitializePlot();
 
                 // 경계선을 OutlineVertices에 단일 세그먼트로 설정
@@ -344,6 +348,10 @@ namespace Hanok
 
                 semiPlots.Add(semiPlot);
             }
+
+            // 사용하지 않는 기존 semi-plot GameObjects 비활성화
+            DeactivateUnusedSemiPlots(count);
+
             return semiPlots;
         }
 
@@ -630,6 +638,43 @@ namespace Hanok
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             return go;
+        }
+
+        /// <summary>
+        /// Semi-plot GameObject를 재사용하거나 새로 생성합니다 (풀링)
+        /// </summary>
+        private GameObject GetOrCreateSemiPlotGameObject(int index)
+        {
+            string semiPlotName = $"SemiPlot_{index}";
+            Transform existingTransform = _semiPlotsParent.Find(semiPlotName);
+
+            if (existingTransform != null)
+            {
+                // 기존 GameObject 재사용
+                GameObject existingObj = existingTransform.gameObject;
+                existingObj.SetActive(true);
+                return existingObj;
+            }
+
+            // 새 GameObject 생성
+            GameObject newSemiPlotObject = new GameObject(semiPlotName);
+            newSemiPlotObject.transform.SetParent(_semiPlotsParent, false);
+            return newSemiPlotObject;
+        }
+
+        /// <summary>
+        /// 사용하지 않는 semi-plot GameObjects를 비활성화합니다
+        /// </summary>
+        private void DeactivateUnusedSemiPlots(int usedCount)
+        {
+            for (int i = usedCount; i < _semiPlotsParent.childCount; i++)
+            {
+                Transform child = _semiPlotsParent.GetChild(i);
+                if (child != null && child.name.StartsWith("SemiPlot_"))
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
         }
         #endregion
     }
