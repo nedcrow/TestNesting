@@ -454,7 +454,10 @@ namespace Hanok
                 }
             }
 
-            // 각 변(edge)에 대해 LineRenderer 설정
+            // Plot의 외곽선 세그먼트를 수집할 리스트
+            var outlineSegments = new List<List<Vector3>>();
+
+            // 각 변(edge)에 대해 LineRenderer 설정 및 외곽선 수집
             for (int i = 0; i < CurrentPlot.PlotVertices.Count; i++)
             {
                 if (i >= lineRenderers.Length) break;
@@ -467,8 +470,10 @@ namespace Hanok
                 LineRenderer edgeLR = lineRenderers[i];
                 if (edgeLR == null) continue;
 
-                Vector3 startVertex = CurrentPlot.PlotVertices[i].snappedPositions[0];
-                Vector3 endVertex = CurrentPlot.PlotVertices[nextIndex].snappedPositions[0];
+                Vector3 startVertex = CurrentPlot.PlotVertices[i].GetAllPositions()[0];
+                Vector3 endVertex = CurrentPlot.PlotVertices[nextIndex].GetAllPositions()[0];
+
+                List<Vector3> edgeSegment = new List<Vector3>();
 
                 // 해당 변에 곡선 경로가 있는지 확인
                 if (edgeCurvePaths.ContainsKey(i) && edgeCurvePaths[i].Count > 1)
@@ -481,6 +486,9 @@ namespace Hanok
                     {
                         edgeLR.SetPosition(j, smoothedCurve[j]);
                     }
+
+                    // 외곽선에 곡선 경로 추가
+                    edgeSegment = new List<Vector3>(smoothedCurve);
                 }
                 else
                 {
@@ -488,7 +496,22 @@ namespace Hanok
                     edgeLR.positionCount = 2;
                     edgeLR.SetPosition(0, startVertex);
                     edgeLR.SetPosition(1, endVertex);
+
+                    // 외곽선에 직선 추가
+                    edgeSegment = new List<Vector3> { startVertex, endVertex };
                 }
+
+                // 외곽선 세그먼트 추가
+                if (edgeSegment.Count > 0)
+                {
+                    outlineSegments.Add(edgeSegment);
+                }
+            }
+
+            // Plot의 OutlineVertices 업데이트
+            if (outlineSegments.Count > 0)
+            {
+                CurrentPlot?.UpdateOutlineVertices(outlineSegments);
             }
         }
 
@@ -530,7 +553,7 @@ namespace Hanok
         }
 
         /// <summary>
-        /// 곡선을 고려하여 최적화된 경계선 정점들을 생성합니다
+        /// Plot의 OutlineVertices를 사용하여 최적화된 경계선 정점들을 생성합니다
         /// </summary>
         private List<Vector3> GenerateOptimizedBoundaryVertices()
         {
@@ -542,34 +565,55 @@ namespace Hanok
 
             List<Vector3> boundaryVertices = new List<Vector3>();
 
-            for (int i = 0; i < CurrentPlot.PlotVertices.Count; i++)
+            // Plot의 OutlineVertices 사용 (UpdateLineMesh에서 업데이트됨)
+            if (CurrentPlot?.OutlineVertices != null && CurrentPlot.OutlineVertices.Count > 0)
             {
-                int nextIndex = (i + 1) % CurrentPlot.PlotVertices.Count;
-
-                // 현재 정점 추가
-                Vector3 currentVertex = CurrentPlot.PlotVertices[i].snappedPositions[0];
-                boundaryVertices.Add(currentVertex);
-
-                // 해당 변에 곡선 경로가 있는지 확인
-                if (edgeCurvePaths.ContainsKey(i) && edgeCurvePaths[i].Count > 2)
+                // 모든 외곽선 세그먼트를 연결하여 연속된 경계선 생성
+                for (int segmentIndex = 0; segmentIndex < CurrentPlot.OutlineVertices.Count; segmentIndex++)
                 {
-                    // 곡선 경로를 적응적 샘플링으로 최적화
-                    List<Vector3> optimizedCurve = OptimizeCurveForFillMesh(edgeCurvePaths[i]);
+                    var segment = CurrentPlot.OutlineVertices[segmentIndex];
+                    if (segment == null || segment.Count == 0) continue;
 
-                    // 시작점과 끝점 제외하고 중간 점들만 추가
-                    for (int j = 1; j < optimizedCurve.Count - 1; j++)
+                    // 첫 번째 세그먼트는 모든 점 추가
+                    if (segmentIndex == 0)
                     {
-                        boundaryVertices.Add(optimizedCurve[j]);
+                        boundaryVertices.AddRange(segment);
                     }
+                    else
+                    {
+                        // 연속 세그먼트는 첫 점 제외하고 추가 (연결점 중복 방지)
+                        for (int i = 1; i < segment.Count; i++)
+                        {
+                            boundaryVertices.Add(segment[i]);
+                        }
+                    }
+                }
+
+                // 폐곡선 완성: 마지막 점이 첫 점과 다르면 첫 점과 연결
+                if (boundaryVertices.Count > 2)
+                {
+                    Vector3 firstPoint = boundaryVertices[0];
+                    Vector3 lastPoint = boundaryVertices[boundaryVertices.Count - 1];
+                    if (Vector3.Distance(firstPoint, lastPoint) > 0.001f)
+                    {
+                        // 마지막 세그먼트가 첫 번째 점으로 돌아가지 않으면 연결
+                        boundaryVertices.Add(firstPoint);
+                    }
+                }
+            }
+            else
+            {
+                // OutlineVertices가 없으면 기본 정점 사용 (fallback)
+                for (int i = 0; i < CurrentPlot.PlotVertices.Count; i++)
+                {
+                    Vector3 vertex = CurrentPlot.PlotVertices[i].GetAllPositions()[0];
+                    boundaryVertices.Add(vertex);
                 }
             }
 
             // 캐시 업데이트
             cachedBoundaryVertices = new List<Vector3>(boundaryVertices);
             boundaryDirty = false;
-
-            // Plot의 외곽선 정보도 업데이트
-            CurrentPlot?.UpdateOutlineVertices(boundaryVertices);
 
             return boundaryVertices;
         }
@@ -825,13 +869,13 @@ namespace Hanok
             PlotVertex startVertex = CurrentPlot.PlotVertices[startVertexIndex];
             PlotVertex endVertex = CurrentPlot.PlotVertices[endVertexIndex];
 
-            if (startVertex.snappedRoads.Count == 0 || endVertex.snappedRoads.Count == 0)
+            if (startVertex.GetAllRoads().Count == 0 || endVertex.GetAllRoads().Count == 0)
             {
                 return EmptyVectorList;
             }
 
             // 공통 도로가 있는지 확인 (같은 도로에서 시작과 끝이 모두 snap된 경우)
-            RoadComponent commonRoad = FindCommonRoad(startVertex.snappedRoads, endVertex.snappedRoads);
+            RoadComponent commonRoad = FindCommonRoad(startVertex.GetAllRoads(), endVertex.GetAllRoads());
 
             List<Vector3> curvePoints;
             if (commonRoad != null)

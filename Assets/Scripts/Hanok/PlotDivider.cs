@@ -53,17 +53,17 @@ namespace Hanok
         }
 
         #region SemiPlot Preview
-        public void ShowSemiPlotPreview(List<Vector3> plotVertices, int unitCount, Transform parent)
+        public void ShowSemiPlotPreview(Plot plot, int unitCount, Transform parent)
         {
             EnsureParents(parent);
 
-            if (plotVertices == null || plotVertices.Count != 4 || unitCount <= 1)
+            if (plot?.PlotVertices == null || plot.PlotVertices.Count != 4 || unitCount <= 1)
             {
                 ClearSemiPlotPreview();
                 return;
             }
 
-            currentSemiPlots = DividePlot(plotVertices, unitCount);
+            currentSemiPlots = DividePlot(plot, unitCount);
             if (currentSemiPlots == null)
             {
                 ClearSemiPlotPreview();
@@ -135,27 +135,29 @@ namespace Hanok
         #endregion
 
         #region Edge Markers Preview
-        public void ShowEdgeMarkersPreview(List<Vector3> plotVertices, float minUnitLength, float maxUnitLength, Transform parent)
+        public void ShowEdgeMarkersPreview(Plot plot, float minUnitLength, float maxUnitLength, Transform parent)
         {
             EnsureParents(parent);
 
-            if (plotVertices == null || plotVertices.Count < 2)
+            if (plot?.PlotVertices == null || plot.PlotVertices.Count < 2)
             {
                 Clear();
                 return;
             }
 
-            var (unitCount, unitLen, totalLen) = CalculateOptimalEdgeMarkers(plotVertices, minUnitLength, maxUnitLength);
+            // 첫 번째 변(edge)만 사용하여 마커 계산 (기존 로직 유지)
+            List<Vector3> firstEdgeVertices = new List<Vector3> { plot.GetVertexPosition(0), plot.GetVertexPosition(1) };
+            var (unitCount, unitLen, totalLen) = CalculateOptimalEdgeMarkers(firstEdgeVertices, minUnitLength, maxUnitLength);
             if (unitCount <= 1)
             {
                 Clear();
                 return;
             }
 
-            CreateOrUpdateEdgeMarkers(plotVertices, unitCount);
+            CreateOrUpdateEdgeMarkers(firstEdgeVertices, unitCount);
 
-            if (plotVertices.Count == 4)
-                ShowSemiPlotPreview(plotVertices, unitCount, parent);
+            if (plot.PlotVertices.Count == 4)
+                ShowSemiPlotPreview(plot, unitCount, parent);
         }
 
         public void ClearEdgeMarkersPreview()
@@ -171,30 +173,363 @@ namespace Hanok
         #endregion
 
         #region Public Methods
-        public List<List<Vector3>> DividePlot(List<Vector3> plotVertices, int count)
+        /// <summary>
+        /// Plot 컴포넌트를 사용하여 곡선 외곽선을 고려한 플롯 분할
+        /// </summary>
+        public List<List<Vector3>> DividePlot(Plot plot, int count)
         {
-            if (plotVertices == null || plotVertices.Count < 4) return null;
+            if (plot?.PlotVertices == null || plot.PlotVertices.Count < 4) return null;
+            if (count <= 0) return null;
+
+            // 곡선 외곽선이 있으면 사용, 없으면 기본 정점 사용
+            List<List<Vector3>> boundarySegments = plot.OutlineVertices?.Count > 0
+                ? plot.OutlineVertices
+                : new List<List<Vector3>> { plot.GetVertexPositions() };
+
+            return DividePlotWithCurvedBoundary(plot, boundarySegments, count);
+        }
+
+        /// <summary>
+        /// 다중 외곽선 세그먼트를 고려한 고급 플롯 분할 (향후 확장용)
+        /// </summary>
+        public List<List<Vector3>> DividePlotAdvanced(Plot plot, int count)
+        {
+            if (plot?.PlotVertices == null || plot.PlotVertices.Count < 4) return null;
+            if (count <= 0) return null;
+
+            // 다중 외곽선이 있는 경우 복합 경계 처리
+            if (plot.OutlineVertices?.Count > 1)
+            {
+                // 다중 세그먼트 경계 직접 사용
+                return DividePlotWithCurvedBoundary(plot, plot.OutlineVertices, count);
+            }
+
+            // 단일 세그먼트인 경우 기본 분할 사용
+            return DividePlot(plot, count);
+        }
+
+        /// <summary>
+        /// 곡선 경계를 고려한 플롯 분할 (기존 PlotVertex 정보 활용)
+        /// </summary>
+        private List<List<Vector3>> DividePlotWithCurvedBoundary(Plot plot, List<List<Vector3>> boundarySegments, int count)
+        {
+            if (plot?.PlotVertices == null || plot.PlotVertices.Count != 4) return null;
+            if (boundarySegments == null || boundarySegments.Count == 0) return null;
             if (count <= 0) return null;
 
             var semiPlots = new List<List<Vector3>>(count);
 
-            // 첫 번째 라인 (0 -> 1), 세 번째 라인 (3 -> 2, 역방향)
-            Vector3 a0 = plotVertices[0], a1 = plotVertices[1];
-            Vector3 b0 = plotVertices[3], b1 = plotVertices[2];
+            // 기존 PlotVertex 정보를 사용하여 4개 코너점 확보
+            Vector3 corner0 = plot.GetVertexPosition(0); // 첫 번째 코너
+            Vector3 corner1 = plot.GetVertexPosition(1); // 두 번째 코너
+            Vector3 corner2 = plot.GetVertexPosition(2); // 세 번째 코너
+            Vector3 corner3 = plot.GetVertexPosition(3); // 네 번째 코너
 
+            // 앞뒤 변의 곡선 정보 확보 (분할 기준)
+            List<Vector3> firstEdge = boundarySegments.Count > 0 && boundarySegments[0].Count > 1
+                ? boundarySegments[0]
+                : new List<Vector3> { corner0, corner1 };
+
+            List<Vector3> thirdEdge = boundarySegments.Count > 2 && boundarySegments[2].Count > 1
+                ? boundarySegments[2]
+                : new List<Vector3> { corner2, corner3 };
+
+            // 좌우 변의 곡선 정보 (첫 번째와 마지막 semi-plot에서만 사용)
+            List<Vector3> secondEdge = boundarySegments.Count > 1 && boundarySegments[1].Count > 1
+                ? boundarySegments[1]
+                : new List<Vector3> { corner1, corner2 };
+
+            List<Vector3> fourthEdge = boundarySegments.Count > 3 && boundarySegments[3].Count > 1
+                ? boundarySegments[3]
+                : new List<Vector3> { corner3, corner0 };
+
+            // 곡선 세그먼트를 따라 분할된 semi-plot들을 생성
             for (int i = 0; i < count; i++)
             {
                 float t1 = (float)i / count;
                 float t2 = (float)(i + 1) / count;
 
-                Vector3 p1 = Vector3.Lerp(a0, a1, t1);
-                Vector3 p2 = Vector3.Lerp(a0, a1, t2);
-                Vector3 q1 = Vector3.Lerp(b0, b1, t1);
-                Vector3 q2 = Vector3.Lerp(b0, b1, t2);
+                List<Vector3> semiPlotBoundary = new List<Vector3>();
 
-                semiPlots.Add(new List<Vector3> { p1, p2, q2, q1 }); // 시계방향
+                // 1. 첫 번째 변의 곡선 세그먼트 (앞쪽, t1 ~ t2 구간)
+                List<Vector3> frontEdgeSegment = GetCurveSegment(firstEdge, t1, t2);
+                semiPlotBoundary.AddRange(frontEdgeSegment);
+
+                // 2. 오른쪽 변: 마지막 semi-plot(i == count-1)인 경우만 곡선 사용 가능
+                Vector3 rightStart = frontEdgeSegment[frontEdgeSegment.Count - 1];
+                Vector3 rightEnd = GetPointOnCurve(thirdEdge, 1.0f - t2);
+
+                if (i == count - 1) // 마지막 semi-plot: 오른쪽이 외곽 경계
+                {
+                    // 두 번째 변(오른쪽)에서 연결 부분 추출
+                    float rightT1 = GetTParameterForPoint(secondEdge, rightStart);
+                    float rightT2 = GetTParameterForPoint(secondEdge, rightEnd);
+
+                    if (rightT1 >= 0 && rightT2 >= 0 && Mathf.Abs(rightT2 - rightT1) > 0.001f)
+                    {
+                        // 곡선 세그먼트 사용
+                        List<Vector3> rightEdgeSegment = GetCurveSegment(secondEdge, rightT1, rightT2);
+                        if (rightEdgeSegment.Count > 1)
+                        {
+                            // 첫 점 제외하고 추가 (연결점 중복 방지)
+                            for (int j = 1; j < rightEdgeSegment.Count; j++)
+                            {
+                                semiPlotBoundary.Add(rightEdgeSegment[j]);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 직선 사용
+                        if (Vector3.Distance(rightStart, rightEnd) > 0.001f)
+                        {
+                            semiPlotBoundary.Add(rightEnd);
+                        }
+                    }
+                }
+                else
+                {
+                    // 중간 semi-plot: 오른쪽은 항상 직선
+                    if (Vector3.Distance(rightStart, rightEnd) > 0.001f)
+                    {
+                        semiPlotBoundary.Add(rightEnd);
+                    }
+                }
+
+                // 3. 세 번째 변의 곡선 세그먼트 (뒤쪽, 역방향: t2 ~ t1 구간)
+                List<Vector3> backEdgeSegment = GetCurveSegment(thirdEdge, 1.0f - t2, 1.0f - t1);
+                if (backEdgeSegment.Count > 1)
+                {
+                    // 첫 점 제외하고 추가 (연결점 중복 방지)
+                    for (int j = 1; j < backEdgeSegment.Count; j++)
+                    {
+                        semiPlotBoundary.Add(backEdgeSegment[j]);
+                    }
+                }
+
+                // 4. 왼쪽 변: 첫 번째 semi-plot(i == 0)인 경우만 곡선 사용 가능
+                Vector3 leftStart = backEdgeSegment[backEdgeSegment.Count - 1];
+                Vector3 leftEnd = frontEdgeSegment[0];
+
+                if (i == 0) // 첫 번째 semi-plot: 왼쪽이 외곽 경계
+                {
+                    // 네 번째 변(왼쪽)에서 연결 부분 추출
+                    float leftT1 = GetTParameterForPoint(fourthEdge, leftStart);
+                    float leftT2 = GetTParameterForPoint(fourthEdge, leftEnd);
+
+                    if (leftT1 >= 0 && leftT2 >= 0 && Mathf.Abs(leftT2 - leftT1) > 0.001f)
+                    {
+                        // 곡선 세그먼트 사용
+                        List<Vector3> leftEdgeSegment = GetCurveSegment(fourthEdge, leftT1, leftT2);
+                        if (leftEdgeSegment.Count > 1)
+                        {
+                            // 첫 점 제외하고 추가 (연결점 중복 방지)
+                            for (int j = 1; j < leftEdgeSegment.Count; j++)
+                            {
+                                semiPlotBoundary.Add(leftEdgeSegment[j]);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 직선 사용 (폐곡선 완성)
+                        if (Vector3.Distance(leftStart, leftEnd) > 0.001f)
+                        {
+                            semiPlotBoundary.Add(leftEnd);
+                        }
+                    }
+                }
+                else
+                {
+                    // 중간 semi-plot: 왼쪽은 항상 직선
+                    if (Vector3.Distance(leftStart, leftEnd) > 0.001f)
+                    {
+                        semiPlotBoundary.Add(leftEnd);
+                    }
+                }
+
+                semiPlots.Add(semiPlotBoundary);
             }
             return semiPlots;
+        }
+
+        /// <summary>
+        /// 곡선에서 특정 점에 가장 가까운 위치의 t 매개변수를 찾습니다
+        /// </summary>
+        private float GetTParameterForPoint(List<Vector3> curvePoints, Vector3 targetPoint)
+        {
+            if (curvePoints == null || curvePoints.Count == 0) return -1f;
+            if (curvePoints.Count == 1) return 0f;
+
+            // 각 세그먼트의 누적 거리 계산
+            List<float> cumulativeDistances = new List<float>();
+            cumulativeDistances.Add(0f);
+
+            float totalLength = 0f;
+            for (int i = 0; i < curvePoints.Count - 1; i++)
+            {
+                float segmentLength = Vector3.Distance(curvePoints[i], curvePoints[i + 1]);
+                totalLength += segmentLength;
+                cumulativeDistances.Add(totalLength);
+            }
+
+            if (totalLength <= 0f) return 0f;
+
+            // 가장 가까운 점과 세그먼트 찾기
+            float closestDistance = float.MaxValue;
+            float bestT = 0f;
+
+            for (int i = 0; i < curvePoints.Count - 1; i++)
+            {
+                Vector3 segmentStart = curvePoints[i];
+                Vector3 segmentEnd = curvePoints[i + 1];
+
+                // 세그먼트에서 가장 가까운 점 찾기
+                Vector3 segmentVector = segmentEnd - segmentStart;
+                Vector3 pointVector = targetPoint - segmentStart;
+
+                float segmentLength = segmentVector.magnitude;
+                if (segmentLength < 0.001f) continue;
+
+                float t = Mathf.Clamp01(Vector3.Dot(pointVector, segmentVector) / (segmentLength * segmentLength));
+                Vector3 closestPointOnSegment = segmentStart + t * segmentVector;
+
+                float distance = Vector3.Distance(targetPoint, closestPointOnSegment);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+
+                    // 전체 곡선에서의 t 매개변수 계산
+                    float segmentStartDistance = cumulativeDistances[i];
+                    float segmentEndDistance = cumulativeDistances[i + 1];
+                    float pointDistanceOnSegment = segmentStartDistance + t * (segmentEndDistance - segmentStartDistance);
+
+                    bestT = pointDistanceOnSegment / totalLength;
+                }
+            }
+
+            return bestT;
+        }
+
+        /// <summary>
+        /// 곡선의 특정 구간(t1~t2)에 해당하는 점들을 추출합니다
+        /// </summary>
+        private List<Vector3> GetCurveSegment(List<Vector3> curvePoints, float t1, float t2)
+        {
+            if (curvePoints == null || curvePoints.Count == 0) return new List<Vector3>();
+            if (curvePoints.Count == 1) return new List<Vector3> { curvePoints[0] };
+
+            t1 = Mathf.Clamp01(t1);
+            t2 = Mathf.Clamp01(t2);
+
+            // t1과 t2가 같으면 단일 점 반환
+            if (Mathf.Abs(t2 - t1) < 0.001f)
+            {
+                return new List<Vector3> { GetPointOnCurve(curvePoints, t1) };
+            }
+
+            // t1 > t2인 경우 swap
+            if (t1 > t2)
+            {
+                float temp = t1;
+                t1 = t2;
+                t2 = temp;
+            }
+
+            List<Vector3> segment = new List<Vector3>();
+
+            // 시작점 추가
+            segment.Add(GetPointOnCurve(curvePoints, t1));
+
+            // 각 세그먼트의 누적 거리 계산 (GetPointOnCurve와 동일한 로직)
+            List<float> cumulativeDistances = new List<float>();
+            cumulativeDistances.Add(0f);
+
+            float totalLength = 0f;
+            for (int i = 0; i < curvePoints.Count - 1; i++)
+            {
+                float segmentLength = Vector3.Distance(curvePoints[i], curvePoints[i + 1]);
+                totalLength += segmentLength;
+                cumulativeDistances.Add(totalLength);
+            }
+
+            if (totalLength <= 0f) return segment;
+
+            // t1과 t2에 해당하는 거리 계산
+            float startDistance = t1 * totalLength;
+            float endDistance = t2 * totalLength;
+
+            // 구간에 포함되는 중간 점들 추가
+            for (int i = 0; i < curvePoints.Count; i++)
+            {
+                float pointDistance = cumulativeDistances[i];
+
+                // 구간 범위 내에 있는 점들만 추가
+                if (pointDistance > startDistance && pointDistance < endDistance)
+                {
+                    segment.Add(curvePoints[i]);
+                }
+            }
+
+            // 끝점 추가 (시작점과 다른 경우에만)
+            Vector3 endPoint = GetPointOnCurve(curvePoints, t2);
+            if (Vector3.Distance(segment[segment.Count - 1], endPoint) > 0.001f)
+            {
+                segment.Add(endPoint);
+            }
+
+            return segment;
+        }
+
+        /// <summary>
+        /// 곡선상의 t 위치(0~1)에서 점을 구합니다 (호장 길이 기준 분할)
+        /// </summary>
+        private Vector3 GetPointOnCurve(List<Vector3> curvePoints, float t)
+        {
+            if (curvePoints == null || curvePoints.Count == 0) return Vector3.zero;
+            if (curvePoints.Count == 1) return curvePoints[0];
+
+            t = Mathf.Clamp01(t);
+
+            if (t <= 0f) return curvePoints[0];
+            if (t >= 1f) return curvePoints[curvePoints.Count - 1];
+
+            // 각 세그먼트의 누적 거리 계산
+            List<float> cumulativeDistances = new List<float>();
+            cumulativeDistances.Add(0f);
+
+            float totalLength = 0f;
+            for (int i = 0; i < curvePoints.Count - 1; i++)
+            {
+                float segmentLength = Vector3.Distance(curvePoints[i], curvePoints[i + 1]);
+                totalLength += segmentLength;
+                cumulativeDistances.Add(totalLength);
+            }
+
+            if (totalLength <= 0f) return curvePoints[0];
+
+            // t에 해당하는 목표 거리 계산
+            float targetDistance = t * totalLength;
+
+            // 목표 거리가 위치한 세그먼트 찾기
+            for (int i = 0; i < cumulativeDistances.Count - 1; i++)
+            {
+                if (targetDistance >= cumulativeDistances[i] && targetDistance <= cumulativeDistances[i + 1])
+                {
+                    // 해당 세그먼트 내에서의 로컬 t 값 계산
+                    float segmentStartDistance = cumulativeDistances[i];
+                    float segmentEndDistance = cumulativeDistances[i + 1];
+                    float segmentLength = segmentEndDistance - segmentStartDistance;
+
+                    if (segmentLength <= 0f) return curvePoints[i];
+
+                    float localT = (targetDistance - segmentStartDistance) / segmentLength;
+                    return Vector3.Lerp(curvePoints[i], curvePoints[i + 1], localT);
+                }
+            }
+
+            // 예외 상황: 마지막 점 반환
+            return curvePoints[curvePoints.Count - 1];
         }
 
         public void Clear()

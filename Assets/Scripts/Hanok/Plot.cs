@@ -68,10 +68,6 @@ namespace Hanok
         public List<Vector3> GetAllPositions() => snapInfos?.Select(info => info.snappedPosition).ToList() ?? new List<Vector3>();
 
         public List<RoadComponent> GetAllRoads() => snapInfos?.Select(info => info.snappedRoad).ToList() ?? new List<RoadComponent>();
-
-        // 호환성을 위한 프로퍼티
-        public List<Vector3> snappedPositions => GetAllPositions();
-        public List<RoadComponent> snappedRoads => GetAllRoads();
     }
     #endregion
 
@@ -84,7 +80,7 @@ namespace Hanok
         [Header("Plot Data")]
         public List<PlotVertex> PlotVertices { get; private set; }
         public Mesh PlotMesh { get; private set; }
-        public List<Vector3> OutlineVertices { get; private set; }
+        public List<List<Vector3>> OutlineVertices { get; private set; }
 
         [Header("Debug Info")]
         [SerializeField] private List<PlotVertex> debugPlotVertices = new List<PlotVertex>();
@@ -103,7 +99,7 @@ namespace Hanok
         public void InitializePlot()
         {
             PlotVertices = new List<PlotVertex>();
-            OutlineVertices = new List<Vector3>();
+            OutlineVertices = new List<List<Vector3>>();
         }
 
         public void SetPlotMesh(Mesh mesh)
@@ -111,9 +107,29 @@ namespace Hanok
             PlotMesh = mesh;
         }
 
-        public void UpdateOutlineVertices(List<Vector3> vertices)
+        public void UpdateOutlineVertices(List<List<Vector3>> outlineSegments)
         {
-            OutlineVertices = new List<Vector3>(vertices);
+            OutlineVertices = new List<List<Vector3>>();
+            foreach (var segment in outlineSegments)
+            {
+                OutlineVertices.Add(new List<Vector3>(segment));
+            }
+        }
+
+        /// <summary>
+        /// 모든 외곽선 세그먼트를 하나의 리스트로 평면화
+        /// </summary>
+        public List<Vector3> GetFlattenedOutlineVertices()
+        {
+            var flattened = new List<Vector3>();
+            if (OutlineVertices != null)
+            {
+                foreach (var segment in OutlineVertices)
+                {
+                    flattened.AddRange(segment);
+                }
+            }
+            return flattened;
         }
         #endregion
 
@@ -178,7 +194,7 @@ namespace Hanok
             List<Vector3> positions = new List<Vector3>(PlotVertices.Count);
             for (int i = 0; i < PlotVertices.Count; i++)
             {
-                positions.Add(PlotVertices[i].snappedPositions[0]);
+                positions.Add(PlotVertices[i].GetAllPositions()[0]);
             }
             return positions;
         }
@@ -191,7 +207,7 @@ namespace Hanok
             if (PlotVertices == null || index < 0 || index >= PlotVertices.Count)
                 return Vector3.zero;
 
-            return PlotVertices[index].snappedPositions[0];
+            return PlotVertices[index].GetAllPositions()[0];
         }
 
         /// <summary>
@@ -216,7 +232,7 @@ namespace Hanok
             List<Vector3> positions = new List<Vector3>(plotVertices.Count);
             for (int i = 0; i < plotVertices.Count; i++)
             {
-                positions.Add(plotVertices[i].snappedPositions[0]);
+                positions.Add(plotVertices[i].GetAllPositions()[0]);
             }
             return positions;
         }
@@ -251,7 +267,7 @@ namespace Hanok
             if (plotVertices == null || index < 0 || index >= plotVertices.Count)
                 return Vector3.zero;
 
-            return plotVertices[index].snappedPositions[0];
+            return plotVertices[index].GetAllPositions()[0];
         }
         #endregion
     }
