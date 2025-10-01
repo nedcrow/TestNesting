@@ -188,6 +188,7 @@ namespace Hanok
             if (plotDivider != null)
             {
                 plotDivider.Clear();
+                houseCreator.ClearExistingHouses();
             }
             CurrentPlotVertices = null;
             IsPlotActive = false;
@@ -209,18 +210,20 @@ namespace Hanok
                 {
                     plotCreator.UpdateVertexPosition(CurrentWorldPosition);
                     CurrentPlotVertices = plotCreator.VertexPositions;
-                    
+
                     // 2개 이상 버텍스일 때 분할 마커 표시
                     // (2개: 마커만, 3개: 마커만, 4개: 마커+semiPlot)
                     if (CurrentHouse != null && (plotCreator.CurrentPlot.PlotVertices?.Count ?? 0) >= 2 && plotDivider != null)
                     {
                         plotDivider.ShowEdgeMarkersPreview(plotCreator.CurrentPlot, CurrentHouse.MinimumLength, CurrentHouse.MaximumLength, plotCreator.transform);
+                        houseCreator.PrepareHouses(plotDivider.GetCurrentSemiPlots(), CurrentHouse);
                     }
                     else
                     {
                         if (plotDivider != null)
                         {
                             plotDivider.Clear();
+                            houseCreator.ClearExistingHouses();
                         }
                     }
                 }
@@ -230,6 +233,7 @@ namespace Hanok
                     if (plotDivider != null)
                     {
                         plotDivider.Clear();
+                        houseCreator.ClearExistingHouses();
                     }
                 }
             }
@@ -287,6 +291,7 @@ namespace Hanok
             if (plotDivider != null)
             {
                 plotDivider.Clear();
+                houseCreator.ClearExistingHouses();
             }
             CurrentPlotVertices = null;
         }
