@@ -27,7 +27,7 @@ namespace Hanok
         [SerializeField] private int priority;
         [SerializeField] private bool allowDuplicates = true;
         [SerializeField] private List<ConstructionMaterial> requiredMaterials;
-        
+
         public string BuildingName => buildingName;
         public BuildingType BuildingType => buildingType;
         public Vector2 Size2D => size2D;
@@ -35,5 +35,7 @@ namespace Hanok
         public bool AllowDuplicates => allowDuplicates;
         public List<ConstructionMaterial> RequiredMaterials => requiredMaterials;
         public BuildingMode Mode { get; set; } = BuildingMode.Waiting;
+
+        public virtual void CompleteBuildingOrder(House house) { }
     }
 }

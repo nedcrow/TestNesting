@@ -18,13 +18,23 @@ namespace Hanok
         [SerializeField] private float minimumLength = 5f;
         [SerializeField] private float maximumLength = 15f;
         [SerializeField] private List<Building> containedBuildings;
-        
+
         public List<BuildingType> RequiredBuildingTypes => requiredBuildingTypes;
         public List<List<Vector3>> OutlineVertices => outlineVertices;
         public float MinimumLength => minimumLength;
         public float MaximumLength => maximumLength;
         public List<Building> ContainedBuildings => containedBuildings;
         public HouseMode Mode { get; set; } = HouseMode.Preview;
-        public float CurrentLength { get; set; }
+
+        public void CompleteHouseOrder(Plot plot)
+        {
+            outlineVertices = plot.OutlineVertices;
+            
+            foreach (Building building in ContainedBuildings)
+            {
+                building.CompleteBuildingOrder(this);
+            }
+            Mode = HouseMode.PlacementConfirmed;
+        }
     }
 }

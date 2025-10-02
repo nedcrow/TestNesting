@@ -10,7 +10,7 @@ namespace Hanok
         [SerializeField] private HousePoolingComponent housePoolingComponent;
         [SerializeField] private BuildingPoolingComponent buildingPoolingComponent;
         [SerializeField] private float housePadding = 1f;
-        
+
         public List<House> CreatedHouses { get; private set; }
         public Vector3 FirstPlotLine { get; set; }
         public int MaxHousesPerPlot { get; set; } = 10;
@@ -46,11 +46,7 @@ namespace Hanok
                     houseCatalog = GetComponentInChildren<HouseCatalog>();
                 }
 
-                if (houseCatalog != null)
-                {
-                    Debug.Log($"[HouseCreator] HouseCatalog automatically found and assigned from {houseCatalog.gameObject.name}");
-                }
-                else
+                if (houseCatalog == null)
                 {
                     Debug.LogError($"[HouseCreator] HouseCatalog is missing! Please assign it in the inspector or add it to this GameObject or its children. GameObject: {gameObject.name}");
                 }
@@ -70,11 +66,7 @@ namespace Hanok
                     buildingCatalog = GetComponentInChildren<BuildingCatalog>();
                 }
 
-                if (buildingCatalog != null)
-                {
-                    Debug.Log($"[HouseCreator] BuildingCatalog automatically found and assigned from {buildingCatalog.gameObject.name}");
-                }
-                else
+                if (buildingCatalog == null)
                 {
                     Debug.LogError($"[HouseCreator] BuildingCatalog is missing! Please assign it in the inspector or add it to this GameObject or its children. GameObject: {gameObject.name}");
                 }
@@ -94,11 +86,7 @@ namespace Hanok
                     housePoolingComponent = GetComponentInChildren<HousePoolingComponent>();
                 }
 
-                if (housePoolingComponent != null)
-                {
-                    Debug.Log($"[HouseCreator] HousePoolingComponent automatically found and assigned from {housePoolingComponent.gameObject.name}");
-                }
-                else
+                if (housePoolingComponent == null)
                 {
                     Debug.LogError($"[HouseCreator] HousePoolingComponent is missing! Please assign it in the inspector or add it to this GameObject or its children. GameObject: {gameObject.name}");
                 }
@@ -118,11 +106,7 @@ namespace Hanok
                     buildingPoolingComponent = GetComponentInChildren<BuildingPoolingComponent>();
                 }
 
-                if (buildingPoolingComponent != null)
-                {
-                    Debug.Log($"[HouseCreator] BuildingPoolingComponent automatically found and assigned from {buildingPoolingComponent.gameObject.name}");
-                }
-                else
+                if (buildingPoolingComponent == null)
                 {
                     Debug.LogError($"[HouseCreator] BuildingPoolingComponent is missing! Please assign it in the inspector or add it to this GameObject or its children. GameObject: {gameObject.name}");
                 }
@@ -171,11 +155,10 @@ namespace Hanok
         /// <param name="plots">하우스를 배치할 Plot 리스트</param>
         /// <param name="houseType">배치할 하우스 타입 (null이면 자동 선택)</param>
         /// <returns>성공적으로 준비된 하우스 개수</returns>
-        public int PrepareHouses(List<Plot> plots, House houseType = null)
+        public int UpdatePreviewHouses(List<Plot> plots, House houseType = null)
         {
             if (plots == null || plots.Count == 0)
             {
-                Debug.LogWarning("[HouseCreator] No plots provided for house preparation.");
                 return 0;
             }
 
@@ -207,8 +190,6 @@ namespace Hanok
                     successCount++;
                 }
             }
-
-            Debug.Log($"[HouseCreator] Successfully prepared {successCount} houses from {plots.Count} plots");
             return successCount;
         }
 
@@ -242,8 +223,6 @@ namespace Hanok
 
             // 하우스 내부 건물들 준비
             PrepareHouseBuildings(house, plot);
-
-            Debug.Log($"[HouseCreator] House {house.name} prepared for plot {plot.name}");
             return house;
         }
 
@@ -397,7 +376,7 @@ namespace Hanok
                 //     Vector3 placementPosition = CalculateBuildingPlacement(buildingType, availableArea, plotBounds);
                 //
                 //     TODO: 3.3. 건물 위치 및 회전 설정
-                    buildingObject.transform.position = house.transform.position;
+                buildingObject.transform.position = house.transform.position;
                 //     buildingObject.transform.rotation = CalculateBuildingRotation(buildingType, house);
                 //
                 //     TODO: 3.4. 건물을 House의 자식으로 설정
@@ -420,8 +399,6 @@ namespace Hanok
 
             // TODO: 4. 배치 완료 후 House 상태 업데이트
             // house.OnBuildingsPlaced();
-
-            Debug.Log($"[HouseCreator] Building preparation for house {house.name} - TODO: Implement building placement logic above");
         }
 
         /// <summary>
@@ -510,6 +487,14 @@ namespace Hanok
             }
 
             Debug.Log($"[HouseCreator] Deactivated {CreatedHouses.Count} houses");
+        }
+
+        public void CompleteHouseOrder(Plot plot)
+        {
+            foreach (House house in CreatedHouses)
+            {
+                house.CompleteHouseOrder(plot);
+            }
         }
     }
 }

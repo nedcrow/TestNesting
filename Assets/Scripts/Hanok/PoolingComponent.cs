@@ -26,7 +26,7 @@ namespace Hanok
         }
     }
 
-    public abstract class PoolingComponent<T> : MonoBehaviour where T : MonoBehaviour
+    public abstract class PoolingComponent<T> : MonoBehaviour where T : Component
     {
         [Header("Pool Settings")]
         [SerializeField] protected int initialPoolSize = 10;
@@ -111,8 +111,6 @@ namespace Hanok
 
             pools[prefab] = pool;
             activeObjects[prefab] = activeList;
-
-            Debug.Log($"[{GetComponentTypeName()}] Pool initialized for {prefab.name} with {initialPoolSize} objects");
         }
 
         protected virtual GameObject CreatePoolObject(T prefab)

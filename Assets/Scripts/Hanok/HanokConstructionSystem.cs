@@ -177,6 +177,7 @@ namespace Hanok
             if ((plotCreator.CurrentPlot.PlotVertices?.Count ?? 0) < 3) return;
 
             // TODO: Implement plot finalization logic
+            houseCreator.CompleteHouseOrder(plotCreator.CurrentPlot);
             IsPlotActive = false;
         }
 
@@ -217,7 +218,10 @@ namespace Hanok
                     if (CurrentHouse != null && (plotCreator.CurrentPlot.PlotVertices?.Count ?? 0) >= 2 && plotDivider != null)
                     {
                         plotDivider.ShowEdgeMarkersPreview(plotCreator.CurrentPlot, CurrentHouse.MinimumLength, CurrentHouse.MaximumLength, plotCreator.transform);
-                        houseCreator.PrepareHouses(plotDivider.GetCurrentSemiPlots(), CurrentHouse);
+                        if (plotCreator.CurrentPlot.PlotVertices?.Count > 3)
+                        {
+                            houseCreator.UpdatePreviewHouses(plotDivider.GetCurrentSemiPlots(), CurrentHouse);
+                        }
                     }
                     else
                     {
@@ -268,7 +272,7 @@ namespace Hanok
             }
             InitializePlotDivider();
         }
-        
+
         private void InitializePlotDivider()
         {
             if (plotDivider == null)
