@@ -161,6 +161,7 @@ namespace Hanok
             {
                 case 3:
                     plotDivider.ClearSemiPlotPreview();
+                    houseCreator.ClearExistingHouses();
                     break;
                 case 1:
                     IsPlotActive = false;

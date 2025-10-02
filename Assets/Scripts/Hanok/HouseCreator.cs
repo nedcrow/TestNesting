@@ -452,7 +452,7 @@ namespace Hanok
         /// <summary>
         /// 특정 하우스 내부의 모든 건물들을 정리합니다
         /// </summary>
-        private void ClearExistingBuildings(House house)
+        public void ClearExistingBuildings(House house)
         {
             if (house == null || buildingPoolingComponent == null) return;
 

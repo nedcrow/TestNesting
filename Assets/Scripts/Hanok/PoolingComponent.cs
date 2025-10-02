@@ -4,12 +4,40 @@ using UnityEngine;
 
 namespace Hanok
 {
+    [System.Serializable]
+    public class PoolStatus
+    {
+        [SerializeField] private string prefabName;
+        [SerializeField] private int availableCount;
+        [SerializeField] private int activeCount;
+        [SerializeField] private List<GameObject> activeObjects;
+
+        public string PrefabName => prefabName;
+        public int AvailableCount => availableCount;
+        public int ActiveCount => activeCount;
+        public List<GameObject> ActiveObjects => activeObjects;
+
+        public PoolStatus(string name, int available, int active, List<GameObject> objects)
+        {
+            prefabName = name;
+            availableCount = available;
+            activeCount = active;
+            activeObjects = new List<GameObject>(objects);
+        }
+    }
+
     public abstract class PoolingComponent<T> : MonoBehaviour where T : MonoBehaviour
     {
         [Header("Pool Settings")]
         [SerializeField] protected int initialPoolSize = 10;
         [SerializeField] protected int maxPoolSize = 50;
         [SerializeField] protected bool allowPoolExpansion = true;
+
+        [Header("Pool Status (Read Only)")]
+        [SerializeField, Space(5)] protected List<PoolStatus> poolStatuses = new List<PoolStatus>();
+        [SerializeField] protected List<GameObject> allActiveObjects = new List<GameObject>();
+        [SerializeField] protected int totalActiveCount = 0;
+        [SerializeField] protected int totalAvailableCount = 0;
 
         protected Dictionary<T, Queue<GameObject>> pools;
         protected Dictionary<T, List<GameObject>> activeObjects;
@@ -226,6 +254,53 @@ namespace Hanok
             }
 
             isInitialized = false;
+        }
+
+        /// <summary>
+        /// 인스펙터 표시용 풀 상태를 업데이트합니다
+        /// </summary>
+        protected virtual void UpdateInspectorStatus()
+        {
+            if (!isInitialized) return;
+
+            poolStatuses.Clear();
+            allActiveObjects.Clear();
+            totalActiveCount = 0;
+            totalAvailableCount = 0;
+
+            if (pools != null && activeObjects != null)
+            {
+                foreach (var kvp in pools)
+                {
+                    T prefab = kvp.Key;
+                    Queue<GameObject> pool = kvp.Value;
+                    List<GameObject> activeList = activeObjects.ContainsKey(prefab) ? activeObjects[prefab] : new List<GameObject>();
+
+                    // null 객체 정리
+                    activeList.RemoveAll(obj => obj == null);
+
+                    string prefabName = prefab != null ? prefab.name : "Unknown";
+                    poolStatuses.Add(new PoolStatus(prefabName, pool.Count, activeList.Count, activeList));
+
+                    // 모든 활성 객체를 하나의 리스트에 추가
+                    allActiveObjects.AddRange(activeList);
+
+                    // 총계 계산
+                    totalAvailableCount += pool.Count;
+                    totalActiveCount += activeList.Count;
+                }
+            }
+        }
+
+        protected virtual void Update()
+        {
+            // 에디터에서만 실행 (빌드에서는 성능을 위해 제외)
+            #if UNITY_EDITOR
+            if (isInitialized)
+            {
+                UpdateInspectorStatus();
+            }
+            #endif
         }
     }
 }
