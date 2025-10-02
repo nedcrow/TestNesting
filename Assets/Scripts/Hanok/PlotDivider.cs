@@ -57,7 +57,7 @@ namespace Hanok
         {
             EnsureParents(parent);
 
-            if (plot?.PlotVertices == null || plot.PlotVertices.Count != 4 || unitCount <= 1)
+            if (plot?.PlotVertices == null || plot.PlotVertices.Count != 4 || unitCount < 1)
             {
                 ClearSemiPlotPreview();
                 return;
@@ -165,7 +165,7 @@ namespace Hanok
                 finalUnitCount = Mathf.Min(firstUnitCount, thirdUnitCount);
             }
 
-            if (finalUnitCount <= 1)
+            if (finalUnitCount < 1)
             {
                 Clear();
                 return;
@@ -216,6 +216,11 @@ namespace Hanok
             if (count <= 0) return null;
 
             var semiPlots = new List<Plot>(count);
+            if (count == 1)
+            {
+                semiPlots.Add(plot);
+                return semiPlots;
+            }
 
             // 기존 PlotVertex 정보를 사용하여 4개 코너점 확보
             Vector3 corner0 = plot.GetVertexPosition(0); // 첫 번째 코너
