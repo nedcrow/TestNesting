@@ -163,8 +163,6 @@ namespace Hanok
 
                 // 두 변 중 분할 가능 수량이 적은 쪽 선택
                 finalUnitCount = Mathf.Min(firstUnitCount, thirdUnitCount);
-
-                Debug.Log($"[PlotDivider] Line 1 unit count: {firstUnitCount}, Line 3 unit count: {thirdUnitCount}, Final unit count: {finalUnitCount}");
             }
 
             if (finalUnitCount <= 1)
