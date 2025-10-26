@@ -151,8 +151,6 @@ Transform:
   m_Children:
   - {fileID: 2067919896}
   - {fileID: 1689491063}
-  - {fileID: 1558093747}
-  - {fileID: 860790367}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &250754022
@@ -284,6 +282,7 @@ GameObject:
   m_Component:
   - component: {fileID: 860790367}
   - component: {fileID: 860790368}
+  - component: {fileID: 860790369}
   m_Layer: 0
   m_Name: HouseCatalog
   m_TagString: Untagged
@@ -304,7 +303,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 250754021}
+  m_Father: {fileID: 1689491063}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &860790368
 MonoBehaviour:
@@ -327,8 +326,27 @@ MonoBehaviour:
   - {fileID: 6062636142699547771, guid: f5a4949817c2fe940a26fff82cff4e90, type: 3}
   - {fileID: 6062636142699547771, guid: ae5e175bb3a1da84082344a798ade865, type: 3}
   - {fileID: 6062636142699547771, guid: a9675c51b8e7fd44a8ea747535c96979, type: 3}
-  housePrefabs:
-  - {fileID: 3009073232824029118, guid: a5bf3626a8673ec499d2023eaa17c906, type: 3}
+  housePrefabs: []
+--- !u!114 &860790369
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 860790366}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc094bca29628974cba9465b3ae32208, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.HousePoolingComponent
+  initialPoolSize: 10
+  maxPoolSize: 50
+  allowPoolExpansion: 1
+  poolStatuses: []
+  allActiveObjects: []
+  totalActiveCount: 0
+  totalAvailableCount: 0
+  houseCatalog: {fileID: 860790368}
 --- !u!1 &963194225
 GameObject:
   m_ObjectHideFlags: 0
@@ -626,6 +644,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1558093747}
   - component: {fileID: 1558093746}
+  - component: {fileID: 1558093748}
   m_Layer: 0
   m_Name: BuildingCatalog
   m_TagString: Untagged
@@ -658,7 +677,8 @@ MonoBehaviour:
   - {fileID: 4052125600440826852, guid: 00c3e9e4e10dfed428e34d979d141261, type: 3}
   - {fileID: 4052125600440826852, guid: 815a2b72b2caa1344b8ed583596474de, type: 3}
   - {fileID: 4052125600440826852, guid: 392126b4c00480c479d7e462e1ea9339, type: 3}
-  buildingGroups: []
+  - {fileID: 4052125600440826852, guid: 3111a0a613f745a4cb05bd0c9bdef357, type: 3}
+  buildingPrefabs: []
 --- !u!4 &1558093747
 Transform:
   m_ObjectHideFlags: 0
@@ -672,8 +692,28 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 250754021}
+  m_Father: {fileID: 1689491063}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1558093748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1558093745}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cca033db189b6c243add188da019429f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.BuildingPoolingComponent
+  initialPoolSize: 10
+  maxPoolSize: 50
+  allowPoolExpansion: 1
+  poolStatuses: []
+  allActiveObjects: []
+  totalActiveCount: 0
+  totalAvailableCount: 0
+  buildingCatalog: {fileID: 1558093746}
 --- !u!1 &1689491062
 GameObject:
   m_ObjectHideFlags: 0
@@ -703,7 +743,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 1558093747}
+  - {fileID: 860790367}
   m_Father: {fileID: 250754021}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1689491064
@@ -768,10 +810,6 @@ MonoBehaviour:
   up: {x: 0, y: 0, z: 0}
   previewColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
   _buildModeEnabled: 1
-  _startSnapped: 0
-  _endSnapped: 0
-  _startSnapTangent: {x: 0, y: 0, z: 0}
-  _startSnapIsEndpoint: 0
 --- !u!4 &1871433685
 Transform:
   m_ObjectHideFlags: 0
@@ -834,14 +872,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Hanok.PlotDefinitionController
   lineMaterial: {fileID: 0}
   fillMaterial: {fileID: 0}
-  enableMeshSnap: 1
   snapLayerMask:
     serializedVersion: 2
     m_Bits: 64
   snapDistance: 1
   enableAutoCurveExploration: 1
-  debugPlotVertices: []
-  debugFilteredVertices: []
 --- !u!114 &2067919898
 MonoBehaviour:
   m_ObjectHideFlags: 0
