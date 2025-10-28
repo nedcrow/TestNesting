@@ -134,7 +134,6 @@ namespace Hanok
         private static List<Transform> CreateWalls(House house, List<Vector3> perimeterVertices, Transform door, bool hasCurve)
         {
             var walls = new List<Transform>();
-            float wallSegmentLength = 2f; // 기본 담장 세그먼트 길이
 
             for (int i = 0; i < perimeterVertices.Count; i++)
             {
@@ -152,7 +151,7 @@ namespace Hanok
                 else
                 {
                     // 직선 담장 생성
-                    CreateStraightWalls(house, startPos, endPos, walls, wallSegmentLength, hasDoorOnSegment, door);
+                    CreateStraightWalls(house, startPos, endPos, walls, hasDoorOnSegment, door);
                 }
             }
 
@@ -187,11 +186,11 @@ namespace Hanok
         /// <summary>
         /// 직선 담장을 생성합니다
         /// </summary>
-        private static void CreateStraightWalls(House house, Vector3 start, Vector3 end, List<Transform> walls, float segmentLength, bool hasDoor, Transform door)
+        private static void CreateStraightWalls(House house, Vector3 start, Vector3 end, List<Transform> walls, bool hasDoor, Transform door)
         {
             Vector3 direction = (end - start).normalized;
             float totalLength = Vector3.Distance(start, end);
-            int segmentCount = Mathf.Max(1, Mathf.FloorToInt(totalLength / segmentLength));
+            int segmentCount = Mathf.FloorToInt(totalLength);
             float actualSegmentLength = totalLength / segmentCount;
 
             for (int i = 0; i < segmentCount; i++)
@@ -199,7 +198,7 @@ namespace Hanok
                 Vector3 segmentCenter = start + direction * (i * actualSegmentLength + actualSegmentLength * 0.5f);
 
                 // 문 위치 건너뛰기
-                if (hasDoor && door != null && Vector3.Distance(segmentCenter, door.position) < 1.5f)
+                if (hasDoor && door != null && Vector3.Distance(segmentCenter, door.position) < 1f)
                     continue;
 
                 GameObject wallObj = new GameObject($"PerimeterWall_Straight_{walls.Count}");
