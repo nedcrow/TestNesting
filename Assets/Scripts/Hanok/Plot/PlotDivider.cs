@@ -252,16 +252,18 @@ namespace Hanok
                 float t1 = (float)i / count;
                 float t2 = (float)(i + 1) / count;
 
-                List<Vector3> semiPlotBoundary = new List<Vector3>();
+                // 4개의 변을 각각 저장 (House는 4개 변 기대)
+                List<List<Vector3>> fourEdges = new List<List<Vector3>>();
 
                 // 1. 첫 번째 변의 곡선 세그먼트 (앞쪽, t1 ~ t2 구간)
                 List<Vector3> frontEdgeSegment = GetCurveSegment(firstEdge, t1, t2);
-                semiPlotBoundary.AddRange(frontEdgeSegment);
+                fourEdges.Add(new List<Vector3>(frontEdgeSegment));
 
                 // 2. 오른쪽 변: 마지막 semi-plot(i == count-1)인 경우만 곡선 사용 가능
                 Vector3 rightStart = frontEdgeSegment[frontEdgeSegment.Count - 1];
                 Vector3 rightEnd = GetPointOnCurve(thirdEdge, 1.0f - t2);
 
+                List<Vector3> rightEdgeSegment = new List<Vector3>();
                 if (i == count - 1) // 마지막 semi-plot: 오른쪽이 외곽 경계
                 {
                     // 두 번째 변(오른쪽)에서 연결 부분 추출
@@ -271,49 +273,30 @@ namespace Hanok
                     if (rightT1 >= 0 && rightT2 >= 0 && Mathf.Abs(rightT2 - rightT1) > 0.001f)
                     {
                         // 곡선 세그먼트 사용
-                        List<Vector3> rightEdgeSegment = GetCurveSegment(secondEdge, rightT1, rightT2);
-                        if (rightEdgeSegment.Count > 1)
-                        {
-                            // 첫 점 제외하고 추가 (연결점 중복 방지)
-                            for (int j = 1; j < rightEdgeSegment.Count; j++)
-                            {
-                                semiPlotBoundary.Add(rightEdgeSegment[j]);
-                            }
-                        }
+                        rightEdgeSegment = GetCurveSegment(secondEdge, rightT1, rightT2);
                     }
                     else
                     {
                         // 직선 사용
-                        if (Vector3.Distance(rightStart, rightEnd) > 0.001f)
-                        {
-                            semiPlotBoundary.Add(rightEnd);
-                        }
+                        rightEdgeSegment = new List<Vector3> { rightStart, rightEnd };
                     }
                 }
                 else
                 {
                     // 중간 semi-plot: 오른쪽은 항상 직선
-                    if (Vector3.Distance(rightStart, rightEnd) > 0.001f)
-                    {
-                        semiPlotBoundary.Add(rightEnd);
-                    }
+                    rightEdgeSegment = new List<Vector3> { rightStart, rightEnd };
                 }
+                fourEdges.Add(rightEdgeSegment);
 
                 // 3. 세 번째 변의 곡선 세그먼트 (뒤쪽, 역방향: t2 ~ t1 구간)
                 List<Vector3> backEdgeSegment = GetCurveSegment(thirdEdge, 1.0f - t2, 1.0f - t1);
-                if (backEdgeSegment.Count > 1)
-                {
-                    // 첫 점 제외하고 추가 (연결점 중복 방지)
-                    for (int j = 1; j < backEdgeSegment.Count; j++)
-                    {
-                        semiPlotBoundary.Add(backEdgeSegment[j]);
-                    }
-                }
+                fourEdges.Add(new List<Vector3>(backEdgeSegment));
 
                 // 4. 왼쪽 변: 첫 번째 semi-plot(i == 0)인 경우만 곡선 사용 가능
                 Vector3 leftStart = backEdgeSegment[backEdgeSegment.Count - 1];
                 Vector3 leftEnd = frontEdgeSegment[0];
 
+                List<Vector3> leftEdgeSegment = new List<Vector3>();
                 if (i == 0) // 첫 번째 semi-plot: 왼쪽이 외곽 경계
                 {
                     // 네 번째 변(왼쪽)에서 연결 부분 추출
@@ -323,33 +306,20 @@ namespace Hanok
                     if (leftT1 >= 0 && leftT2 >= 0 && Mathf.Abs(leftT2 - leftT1) > 0.001f)
                     {
                         // 곡선 세그먼트 사용
-                        List<Vector3> leftEdgeSegment = GetCurveSegment(fourthEdge, leftT1, leftT2);
-                        if (leftEdgeSegment.Count > 1)
-                        {
-                            // 첫 점 제외하고 추가 (연결점 중복 방지)
-                            for (int j = 1; j < leftEdgeSegment.Count; j++)
-                            {
-                                semiPlotBoundary.Add(leftEdgeSegment[j]);
-                            }
-                        }
+                        leftEdgeSegment = GetCurveSegment(fourthEdge, leftT1, leftT2);
                     }
                     else
                     {
-                        // 직선 사용 (폐곡선 완성)
-                        if (Vector3.Distance(leftStart, leftEnd) > 0.001f)
-                        {
-                            semiPlotBoundary.Add(leftEnd);
-                        }
+                        // 직선 사용
+                        leftEdgeSegment = new List<Vector3> { leftStart, leftEnd };
                     }
                 }
                 else
                 {
                     // 중간 semi-plot: 왼쪽은 항상 직선
-                    if (Vector3.Distance(leftStart, leftEnd) > 0.001f)
-                    {
-                        semiPlotBoundary.Add(leftEnd);
-                    }
+                    leftEdgeSegment = new List<Vector3> { leftStart, leftEnd };
                 }
+                fourEdges.Add(leftEdgeSegment);
 
                 // Plot 객체 생성 및 경계선 설정 (풀링 사용)
                 GameObject semiPlotObject = GetOrCreateSemiPlotGameObject(i);
@@ -360,9 +330,8 @@ namespace Hanok
                 }
                 semiPlot.InitializePlot();
 
-                // 경계선을 OutlineVertices에 단일 세그먼트로 설정
-                var outlineSegments = new List<List<Vector3>> { semiPlotBoundary };
-                semiPlot.UpdateOutlineVertices(outlineSegments);
+                // 4개의 변을 각각 OutlineVertices에 설정
+                semiPlot.UpdateOutlineVertices(fourEdges);
 
                 semiPlots.Add(semiPlot);
             }
@@ -454,6 +423,14 @@ namespace Hanok
                 float temp = t1;
                 t1 = t2;
                 t2 = temp;
+            }
+
+            // 직선인 경우 (2개 점만): 단순 보간
+            if (curvePoints.Count == 2)
+            {
+                Vector3 start = Vector3.Lerp(curvePoints[0], curvePoints[1], t1);
+                Vector3 end = Vector3.Lerp(curvePoints[0], curvePoints[1], t2);
+                return new List<Vector3> { start, end };
             }
 
             List<Vector3> segment = new List<Vector3>();

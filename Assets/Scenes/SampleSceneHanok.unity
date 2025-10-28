@@ -707,7 +707,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hanok.BuildingPoolingComponent
   initialPoolSize: 10
-  maxPoolSize: 50
+  maxPoolSize: 200
   allowPoolExpansion: 1
   poolStatuses: []
   allActiveObjects: []

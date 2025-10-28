@@ -54,14 +54,7 @@ namespace Hanok
             // 실제 프리팹 인스턴스 생성 및 배치
             CreateAndPlaceInstances(doorTransform, wallTransforms, cornerTransforms);
 
-            Debug.Log($"CompleteBuildingOrder");
-            if (house.OutlineVertices.Count != 0)
-            {
-                foreach (var outline in house.OutlineVertices)
-                {
-                    Debug.Log($"outline count = {outline.Count}");
-                }
-            }
+            Debug.Log($"[PerimeterBuilding]CompleteBuildingOrder");
         }
 
         /// <summary>

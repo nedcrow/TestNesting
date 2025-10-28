@@ -481,13 +481,35 @@ namespace Hanok
                     // 곡선 경로 사용
                     List<Vector3> smoothedCurve = GenerateSmoothCurve(edgeCurvePaths[i]);
 
+                    // 곡선이 실제로 직선에 가까운지 확인 (시작, 중앙, 끝 점으로 검증)
+                    if (smoothedCurve.Count >= 3)
+                    {
+                        Vector3 startPoint = smoothedCurve[0];
+                        Vector3 midPoint = smoothedCurve[smoothedCurve.Count / 2];
+                        Vector3 endPoint = smoothedCurve[smoothedCurve.Count - 1];
+
+                        // 첫 번째 직선: 시작 -> 중앙
+                        Vector3 firstDir = (midPoint - startPoint).normalized;
+                        // 두 번째 직선: 중앙 -> 끝
+                        Vector3 secondDir = (endPoint - midPoint).normalized;
+
+                        // 두 방향의 각도 차이 계산
+                        float angleDifference = Vector3.Angle(firstDir, secondDir);
+
+                        // 3도 미만이면 직선으로 처리
+                        if (angleDifference < 3f)
+                        {
+                            smoothedCurve = new List<Vector3> { startPoint, endPoint };
+                        }
+                    }
+
                     edgeLR.positionCount = smoothedCurve.Count;
                     for (int j = 0; j < smoothedCurve.Count; j++)
                     {
                         edgeLR.SetPosition(j, smoothedCurve[j]);
                     }
 
-                    // 외곽선에 곡선 경로 추가
+                    // 외곽선에 곡선 또는 직선 경로 추가
                     edgeSegment = new List<Vector3>(smoothedCurve);
                 }
                 else

@@ -223,6 +223,8 @@ namespace Hanok
 
             // 하우스 내부 건물들 준비
             PrepareHouseBuildings(house, plot);
+
+            house.OutlineVertices = plot.OutlineVertices;
             return house;
         }
 
@@ -321,6 +323,8 @@ namespace Hanok
         /// </summary>
         private void ConfigureHouseForPlot(House house, Plot plot)
         {
+            if(house.OutlineVertices != null || house.OutlineVertices.Count < 1) house.OutlineVertices = plot.OutlineVertices;
+
             var plotBounds = CalculatePlotBounds(plot);
 
             // 하우스를 Plot 중앙에 배치
@@ -335,6 +339,8 @@ namespace Hanok
         /// </summary>
         private void PrepareHouseBuildings(House house, Plot plot)
         {
+            if(house.OutlineVertices != null || house.OutlineVertices.Count < 1) house.OutlineVertices = plot.OutlineVertices;
+
             if (buildingPoolingComponent == null)
             {
                 Debug.LogWarning("[HouseCreator] BuildingPoolingComponent not assigned. Skipping building preparation.");
@@ -489,12 +495,12 @@ namespace Hanok
             Debug.Log($"[HouseCreator] Deactivated {CreatedHouses.Count} houses");
         }
 
-        public void CompleteHouseOrder(Plot plot)
-        {
+        public void CompleteHouseOrders()
+        {            
             foreach (House house in CreatedHouses)
             {
-                house.CompleteHouseOrder(plot);
-            }
+                house.CompleteHouseOrder();
+            }            
         }
     }
 }

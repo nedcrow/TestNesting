@@ -41,6 +41,7 @@ namespace Hanok
 
         protected Dictionary<T, Queue<GameObject>> pools;
         protected Dictionary<T, List<GameObject>> activeObjects;
+        protected Dictionary<T, int> instanceCounters; // 각 프리팹별 생성 카운터
         protected bool isInitialized = false;
 
         public int InitialPoolSize => initialPoolSize;
@@ -74,6 +75,7 @@ namespace Hanok
             // 컬렉션 초기화
             pools = new Dictionary<T, Queue<GameObject>>();
             activeObjects = new Dictionary<T, List<GameObject>>();
+            instanceCounters = new Dictionary<T, int>();
 
             // 각 등록된 프리팹에 대해 풀 생성
             foreach (GameObject registeredPrefab in catalog.RegisteredPrefabs)
@@ -99,6 +101,9 @@ namespace Hanok
             var pool = new Queue<GameObject>();
             var activeList = new List<GameObject>();
 
+            // 인스턴스 카운터 초기화
+            instanceCounters[prefab] = 0;
+
             // 초기 풀 크기만큼 오브젝트 생성
             for (int i = 0; i < initialPoolSize; i++)
             {
@@ -116,6 +121,20 @@ namespace Hanok
         protected virtual GameObject CreatePoolObject(T prefab)
         {
             GameObject poolObject = Instantiate(prefab.gameObject, transform);
+
+            // 고유 번호 부여
+            int instanceNumber = instanceCounters.ContainsKey(prefab) ? instanceCounters[prefab] : 0;
+            poolObject.name = $"{prefab.name}_{instanceNumber}";
+
+            if (instanceCounters.ContainsKey(prefab))
+            {
+                instanceCounters[prefab]++;
+            }
+            else
+            {
+                instanceCounters[prefab] = 1;
+            }
+
             poolObject.SetActive(false);
             return poolObject;
         }
@@ -150,7 +169,6 @@ namespace Hanok
 
             if (allowPoolExpansion && GetTotalActiveCount() < maxPoolSize)
             {
-                Debug.Log($"[{GetComponentTypeName()}] Pool expanded for {prefab.name}");
                 return CreatePoolObject(prefab);
             }
 
@@ -193,6 +211,18 @@ namespace Hanok
             if (catalog?.RegisteredPrefabs == null) return null;
 
             string cleanName = component.name.Replace("(Clone)", "").Trim();
+
+            // "_숫자" 패턴 제거 (예: "Building_5" → "Building")
+            int lastUnderscoreIndex = cleanName.LastIndexOf('_');
+            if (lastUnderscoreIndex > 0)
+            {
+                string afterUnderscore = cleanName.Substring(lastUnderscoreIndex + 1);
+                // 언더스코어 뒤가 숫자면 제거
+                if (int.TryParse(afterUnderscore, out _))
+                {
+                    cleanName = cleanName.Substring(0, lastUnderscoreIndex);
+                }
+            }
 
             return catalog.RegisteredPrefabs
                 .Select(prefab => prefab?.GetComponent<T>())

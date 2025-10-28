@@ -176,8 +176,9 @@ namespace Hanok
             if (plotCreator == null || !IsPlotActive) return;
             if ((plotCreator.CurrentPlot.PlotVertices?.Count ?? 0) < 3) return;
 
-            // TODO: Implement plot finalization logic
-            houseCreator.CompleteHouseOrder(plotCreator.CurrentPlot);
+            // TODO: Implement plot finalization logic            
+            houseCreator.CompleteHouseOrders();
+           
             IsPlotActive = false;
         }
 
