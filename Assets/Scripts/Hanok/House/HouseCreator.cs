@@ -7,8 +7,10 @@ namespace Hanok
     {
         [SerializeField] private HouseCatalog houseCatalog;
         [SerializeField] private BuildingCatalog buildingCatalog;
+        [SerializeField] private BasicGameObjectCatalog buildingMemberCatalog;
         [SerializeField] private HousePoolingComponent housePoolingComponent;
         [SerializeField] private BuildingPoolingComponent buildingPoolingComponent;
+        [SerializeField] private BasicPoolingComponent buildingMemberComponent;
         [SerializeField] private float housePadding = 1f;
 
         public List<House> CreatedHouses { get; private set; }
@@ -29,8 +31,10 @@ namespace Hanok
         {
             ValidateHouseCatalog();
             ValidateBuildingCatalog();
+            ValidatePerimeterCatalog();
             ValidateHousePoolingComponent();
             ValidateBuildingPoolingComponent();
+            ValidatePerimeterPoolingComponent();
         }
 
         private void ValidateHouseCatalog()
@@ -69,6 +73,26 @@ namespace Hanok
                 if (buildingCatalog == null)
                 {
                     Debug.LogError($"[HouseCreator] BuildingCatalog is missing! Please assign it in the inspector or add it to this GameObject or its children. GameObject: {gameObject.name}");
+                }
+            }
+        }
+
+        private void ValidatePerimeterCatalog()
+        {
+            if (buildingMemberCatalog == null)
+            {
+                // 자신에서 찾기
+                buildingMemberCatalog = GetComponent<BasicGameObjectCatalog>();
+
+                // 자식들에서 찾기
+                if (buildingMemberCatalog == null)
+                {
+                    buildingMemberCatalog = GetComponentInChildren<BasicGameObjectCatalog>();
+                }
+
+                if (buildingMemberCatalog == null)
+                {
+                    Debug.LogWarning($"[HouseCreator] PerimeterCatalog is missing! Perimeter building placement will be skipped. GameObject: {gameObject.name}");
                 }
             }
         }
@@ -113,6 +137,26 @@ namespace Hanok
             }
         }
 
+        private void ValidatePerimeterPoolingComponent()
+        {
+            if (buildingMemberComponent == null)
+            {
+                // 자신에서 찾기
+                buildingMemberComponent = GetComponent<BasicPoolingComponent>();
+
+                // 자식들에서 찾기
+                if (buildingMemberComponent == null)
+                {
+                    buildingMemberComponent = GetComponentInChildren<BasicPoolingComponent>();
+                }
+
+                if (buildingMemberComponent == null)
+                {
+                    Debug.LogWarning($"[HouseCreator] PerimeterPoolingComponent is missing! Perimeter building placement will be skipped. GameObject: {gameObject.name}");
+                }
+            }
+        }
+
         /// <summary>
         /// 실행 시간에 필수 컴포넌트들이 할당되어 있는지 검증합니다
         /// </summary>
@@ -143,6 +187,18 @@ namespace Hanok
             {
                 Debug.LogWarning("[HouseCreator] BuildingCatalog is missing! House building preparation will be skipped.");
                 // buildingCatalog는 경고만 출력하고 진행
+            }
+
+            if (buildingMemberComponent == null)
+            {
+                Debug.LogWarning("[HouseCreator] PerimeterPoolingComponent is missing! Perimeter building placement will be skipped.");
+                // perimeterPoolingComponent는 경고만 출력하고 진행
+            }
+
+            if (buildingMemberCatalog == null)
+            {
+                Debug.LogWarning("[HouseCreator] PerimeterCatalog is missing! Perimeter building placement will be skipped.");
+                // perimeterCatalog는 경고만 출력하고 진행
             }
 
             return isValid;
@@ -223,8 +279,6 @@ namespace Hanok
 
             // 하우스 내부 건물들 준비
             PrepareHouseBuildings(house, plot);
-
-            house.OutlineVertices = plot.OutlineVertices;
             return house;
         }
 
@@ -353,19 +407,19 @@ namespace Hanok
                 return;
             }
 
-            // TODO: 1. House의 필요 건물 리스트 가져오기
+            // 1. House의 필요 건물 리스트 가져오기
             List<BuildingType> requiredBuildings = house.RequiredBuildingTypes;
+            List<Building> buildings = new List<Building>();
             if (requiredBuildings == null || requiredBuildings.Count == 0) return;
 
-            // TODO: 2. Plot 내부 영역 계산 및 배치 가능 구역 분석
-            // var plotBounds = CalculatePlotBounds(plot);
-            // var availableArea = CalculateAvailableBuildingArea(plotBounds, house);            
+            // 2. House 영역 크기 계산 (사용 가능한 최대 크기)
+            float maxBuildingSize = CalculateMaxBuildingSize(house, plot);
 
-            // TODO: 3. 각 필요 건물 타입에 대해 반복 배치
+            // 3. 각 필요 건물 타입에 대해 반복 배치
             foreach (BuildingType buildingType in requiredBuildings)
             {
-                //     TODO: 3.1. 풀에서 건물 가져오기
-                GameObject buildingObject = buildingPoolingComponent.GetBuilding(buildingType);
+                // 풀에서 건물 가져오기 (maxSize 제약 적용)
+                GameObject buildingObject = buildingPoolingComponent.GetBuilding(buildingType, maxBuildingSize);
                 if (buildingObject == null) continue;
                 buildingObject.SetActive(true);
 
@@ -377,34 +431,30 @@ namespace Hanok
                     continue;
                 }
 
-                //
-                //     TODO: 3.2. 건물 배치 위치 계산
-                //     Vector3 placementPosition = CalculateBuildingPlacement(buildingType, availableArea, plotBounds);
-                //
-                //     TODO: 3.3. 건물 위치 및 회전 설정
-                buildingObject.transform.position = house.transform.position;
-                //     buildingObject.transform.rotation = CalculateBuildingRotation(buildingType, house);
-                //
-                //     TODO: 3.4. 건물을 House의 자식으로 설정
-                //     buildingObject.transform.SetParent(house.transform, true);
-                //
-                //     TODO: 3.5. 배치된 건물 영역을 사용 가능 영역에서 제외
-                //     UpdateAvailableArea(availableArea, buildingObject, buildingType);
-
-                // 하우스의 건물 리스트에 추가
-                if (house.ContainedBuildings == null)
-                {
-                    // ContainedBuildings가 null인 경우 초기화 (readonly property이므로 직접 할당 불가)
-                    Debug.LogWarning($"[HouseCreator] House {house.name} ContainedBuildings list is null. Cannot track building.");
-                }
-                else
-                {
-                    house.ContainedBuildings.Add(building);
-                }
+                buildings.Add(building);
             }
 
-            // TODO: 4. 배치 완료 후 House 상태 업데이트
-            // house.OnBuildingsPlaced();
+            // 4. 배치 완료 후 House 상태 업데이트
+            house.PrepareBuilding(buildings);
+        }
+
+        /// <summary>
+        /// House 내부에 배치 가능한 최대 건물 크기를 계산합니다
+        /// </summary>
+        private float CalculateMaxBuildingSize(House house, Plot plot)
+        {
+            // Plot 경계 상자 계산
+            var plotBounds = CalculatePlotBounds(plot);
+
+            // 내부 여유 공간 고려 (경계에서 일정 거리 확보)
+            float innerPadding = housePadding * 2f; // 양쪽 여백
+
+            // 사용 가능한 최대 너비와 깊이
+            float maxWidth = Mathf.Max(0, plotBounds.size.x - innerPadding);
+            float maxDepth = Mathf.Max(0, plotBounds.size.z - innerPadding);
+
+            // 최대 면적 반환
+            return Mathf.Max(maxWidth, maxDepth);
         }
 
         /// <summary>
@@ -499,7 +549,7 @@ namespace Hanok
         {            
             foreach (House house in CreatedHouses)
             {
-                house.CompleteHouseOrder();
+                house.CompleteHouseOrder(buildingMemberComponent);
             }            
         }
     }

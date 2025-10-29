@@ -10,8 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 8188271011076600694}
   - component: {fileID: 3009073232824029118}
+  - component: {fileID: 8115207346763628164}
   m_Layer: 0
-  m_Name: House02
+  m_Name: Ju_Mak_C
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44,12 +45,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddc313cf333f31945ab5a5e15e4f7aad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hanok.House
-  requiredBuildingTypes: 000000000500000006000000070000000b000000
-  outlineVertices:
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
-  minimumLength: 5
+  requiredBuildingTypes: 0000000005000000060000000f0000000a000000020000000b000000
+  outlineVerticesWrapper: []
+  minimumLength: 7
   maximumLength: 15
   containedBuildings: []
+--- !u!114 &8115207346763628164
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6062636142699547771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b1c55d3c278f9e4ba51fdb4d86ef7d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.PerimeterBuildingPlacer

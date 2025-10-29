@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8188271011076600694}
   - component: {fileID: 3009073232824029118}
   m_Layer: 0
-  m_Name: Ju_Mak02
+  m_Name: Si_jeon_A
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddc313cf333f31945ab5a5e15e4f7aad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hanok.House
-  requiredBuildingTypes: 000000000500000006000000020000000d0000000b000000
+  requiredBuildingTypes: 00000000050000000c0000000b000000
   outlineVertices:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}

@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2480898894867309067
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6597262276785475257}
+  - component: {fileID: 910241967991752282}
+  - component: {fileID: 7174628839578348519}
+  m_Layer: 0
+  m_Name: BuildingCatalog
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6597262276785475257
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2480898894867309067}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 41.95992, y: 0.04999, z: -186.90845}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &910241967991752282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2480898894867309067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7df330f0f8e2d14468f19531ab981913, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.BuildingCatalog
+  registeredPrefabs:
+  - {fileID: 4052125600440826852, guid: 818edddda23f0fd4285124ff6a52e35a, type: 3}
+  - {fileID: 4052125600440826852, guid: ca9721adc86cd5a49b9c2ff743173eb2, type: 3}
+  - {fileID: 4052125600440826852, guid: a1d3b06dc2fbad24f8a7b284db7c2a25, type: 3}
+  - {fileID: 4052125600440826852, guid: 88b61c6dbc47ffb4bb59c3dd46ec1874, type: 3}
+  - {fileID: 4052125600440826852, guid: dad914df97cbceb43a0b014f8300e364, type: 3}
+  - {fileID: 4052125600440826852, guid: b7995d4f3e5cf424e8d2874965440a8e, type: 3}
+  - {fileID: 4052125600440826852, guid: 5196ec21430cf774a97a588f22db740d, type: 3}
+  - {fileID: 4052125600440826852, guid: 9ab5de906d28f3541b16072ce607bd02, type: 3}
+  - {fileID: 4052125600440826852, guid: 628c9866449ded64cbaa7a513eb498f0, type: 3}
+  - {fileID: 4052125600440826852, guid: 00c3e9e4e10dfed428e34d979d141261, type: 3}
+  - {fileID: 4052125600440826852, guid: 815a2b72b2caa1344b8ed583596474de, type: 3}
+  - {fileID: 4052125600440826852, guid: 392126b4c00480c479d7e462e1ea9339, type: 3}
+  - {fileID: 4052125600440826852, guid: 3111a0a613f745a4cb05bd0c9bdef357, type: 3}
+  buildingPrefabs: []
+--- !u!114 &7174628839578348519
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2480898894867309067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cca033db189b6c243add188da019429f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Hanok.BuildingPoolingComponent
+  initialPoolSize: 10
+  maxPoolSize: 200
+  allowPoolExpansion: 1
+  poolStatuses: []
+  allActiveObjects: []
+  totalActiveCount: 0
+  totalAvailableCount: 0
+  buildingCatalog: {fileID: 910241967991752282}
