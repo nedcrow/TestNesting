@@ -623,71 +623,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Hanok.HouseMaker
   houseCatalog: {fileID: 0}
   buildingCatalog: {fileID: 0}
-  perimeterCatalog: {fileID: 0}
+  buildingMemberCatalog: {fileID: 0}
   housePoolingComponent: {fileID: 0}
   buildingPoolingComponent: {fileID: 0}
-  perimeterPoolingComponent: {fileID: 0}
+  buildingMemberComponent: {fileID: 0}
   housePadding: 2
---- !u!1 &1871433683
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1871433685}
-  - component: {fileID: 1871433684}
-  m_Layer: 6
-  m_Name: RoadBuilder
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1871433684
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1871433683}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 53a1cf23f0c5b3841a49c0e683665bc2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Hanok.RoadBuilder
-  groundMask:
-    serializedVersion: 2
-    m_Bits: 8
-  rayMaxDistance: 1000
-  roadWidth: 2
-  roadMaterial: {fileID: 0}
-  uvTilingPerMeter: 1
-  samplesPerMeter: 1.5
-  handleLenRatio: 0.25
-  maxHandleLen: 6
-  altCurveStrength: 0.2
-  segmentLength: 4
-  snapDistance: 2
-  up: {x: 0, y: 0, z: 0}
-  previewColor: {r: 1, g: 0.85, b: 0.2, a: 0.9}
-  _buildModeEnabled: 1
---- !u!4 &1871433685
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1871433683}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2067919895
 GameObject:
   m_ObjectHideFlags: 0
@@ -756,6 +696,63 @@ MonoBehaviour:
   semiPlotColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   markerColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   markerLength: 0.4
+--- !u!1001 &963095473544602851
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2069331261990052091, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_Name
+      value: RoadBuilder
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5254288657286168816, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 14dc7b35b5866c541933e90194399ad1, type: 3}
 --- !u!1001 &3482709397024222776
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -884,7 +881,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4126432805249949965, guid: 15b3720ccb107ff41b66ce70c2c94a02, type: 3}
       propertyPath: m_Name
-      value: PerimeterCatalog
+      value: BuildingMemberCatalog
       objectReference: {fileID: 0}
     - target: {fileID: 7371992513360734380, guid: 15b3720ccb107ff41b66ce70c2c94a02, type: 3}
       propertyPath: 'registeredPrefabs.Array.data[0]'
@@ -951,4 +948,4 @@ SceneRoots:
   - {fileID: 705507995}
   - {fileID: 1361351593}
   - {fileID: 250754021}
-  - {fileID: 1871433685}
+  - {fileID: 963095473544602851}
